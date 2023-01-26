@@ -1,0 +1,43 @@
+{
+    "configurations": [
+        {
+            "name": "Energia",
+            "compilerPath": "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\bin\\arm-none-eabi-g++",
+            "compilerArgs": [
+                "-std=gnu++11",
+                "-fpermissive",
+                "-fno-exceptions",
+                "-ffunction-sections",
+                "-fdata-sections",
+                "-fno-threadsafe-statics",
+                "-Wno-error=narrowing"
+            ],
+            "includePath": [
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\cores",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\cores\\msp432r",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\system\\kernel\\tirtos\\packages",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\cores\\msp432r\\ti\\runtime\\wiring\\",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\system\\source",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\lib\\gcc\\arm-none-eabi\\6.3.1\\include",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\lib\\gcc\\arm-none-eabi\\6.3.1\\include-fixed",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\arm-none-eabi\\include",
+                "${env:USERPROFILE}\\Documents\\Energia\\libraries\\**"
+            ],
+            "forcedInclude": [
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\cores\\msp432r\\ti\\runtime\\wiring\\Energia.h",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\variants\\MSP_EXP432P401R\\pins_energia.h",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\variants\\MSP_EXP432P401R\\pin_names_energia.h",
+                "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\variants\\MSP_EXP432P401R\\board.h"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++23",
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "windows-gcc-arm"
+        }
+    ],
+    "version": 4
+}
