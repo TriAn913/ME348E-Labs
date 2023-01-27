@@ -6,8 +6,7 @@
 #include <RSLK_Pins.h>
 #include <SimpleRSLK.h>
 /* notes:
-  ideally, would change all cases into functions with pass by reference parameters or make each sensor/motor an object with its own class variables,
-  but that would take more work than what is done below. The code below is non-blocking with a hard-coded delay of 2ms per loop. */
+  The code below is non-blocking with a hard-coded delay of 2ms per loop. */
 
 bool onToggle = false; // toggle all functions on/off (off disables all motors)
 int lpButtonValue = 0; // launchpad left button
