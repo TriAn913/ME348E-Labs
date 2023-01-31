@@ -17,6 +17,7 @@ private:
 	uint8_t _eb_pin;
 	bool configured;
 	void Trigger_Encoder();
+
 public:
 	Custom_Encoder();
 
@@ -37,6 +38,5 @@ public:
 	/// \brief Set the encoder tick count to 0
 	///
 	void resetLeftEncoderCnt();
-	
 };
 #endif

@@ -7,9 +7,12 @@
 #include "definitions.h"
 #include "Custom_Encoder.h"
 
+logLevels logLevel = NONE;
+
+Custom_Encoder encoder[2];
+
 void setup()
 {
-    Custom_Encoder encoder[2];
     encoder[0].begin(ENCODER_ELA_PIN, ENCODER_ELB_PIN); // left wheel encoder on the rslk kit
     encoder[1].begin(ENCODER_ERA_PIN, ENCODER_ERB_PIN); // right wheel encoder on the rslk kit
 
@@ -18,5 +21,5 @@ void setup()
 
 void loop()
 {
-
+    customLog(encoder[0].getEncoderCnt(), logLevel, DEBUG, false);
 }

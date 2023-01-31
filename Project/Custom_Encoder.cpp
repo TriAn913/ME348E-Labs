@@ -25,40 +25,46 @@ int32_t Custom_Encoder::getEncoderCnt()
     return enc_cnt;
 }
 
-void Custom_Encoder::resetLeftEncoderCnt() {
-	enc_cnt = 0;
+void Custom_Encoder::resetLeftEncoderCnt()
+{
+    enc_cnt = 0;
 }
 
-void Custom_Encoder::Trigger_Encoder() {
-	enc_dir = digitalRead(_ea_pin);
+void Custom_Encoder::Trigger_Encoder()
+{
+    enc_dir = digitalRead(_ea_pin);
 
-    if (enc_dir == 1) {
-            enc_cnt++;
-    } else {
+    if (enc_dir == 1)
+    {
+        enc_cnt++;
+    }
+    else
+    {
         enc_cnt--;
     }
 }
 
-void attachInterrupt2(uint8_t pin, Custom_Encoder* a,  void(Custom_Encoder::*userFunc)(void), int mode)
+void attachInterrupt2(uint8_t pin, Custom_Encoder *a, void (Custom_Encoder::*userFunc)(void), int mode)
 {
     GPIO_PinConfig intType;
 
-    switch (mode) {
-        case LOW:
-            intType = GPIO_CFG_IN_INT_LOW;
-            break;
-        case CHANGE:
-            intType = GPIO_CFG_IN_INT_BOTH_EDGES;
-            break;
-        case RISING:
-            intType = GPIO_CFG_IN_INT_RISING;
-            break;
-        case FALLING:
-            intType = GPIO_CFG_IN_INT_FALLING;
-            break;
-        case HIGH:
-            intType = GPIO_CFG_IN_INT_HIGH;
-            break;
+    switch (mode)
+    {
+    case LOW:
+        intType = GPIO_CFG_IN_INT_LOW;
+        break;
+    case CHANGE:
+        intType = GPIO_CFG_IN_INT_BOTH_EDGES;
+        break;
+    case RISING:
+        intType = GPIO_CFG_IN_INT_RISING;
+        break;
+    case FALLING:
+        intType = GPIO_CFG_IN_INT_FALLING;
+        break;
+    case HIGH:
+        intType = GPIO_CFG_IN_INT_HIGH;
+        break;
     }
 
     GPIO_setConfig(pin, GPIO_CFG_IN_INT_ONLY | intType);

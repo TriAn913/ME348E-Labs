@@ -3,23 +3,23 @@
 #include <QTRSensors.h>
 #include <GP2Y0A21_Sensor.h>
 
-#ifndef SimpleRSLK_h
-#define SimpleRSLK_h
+#ifndef definitions_h
+#define definitions_h
 
 /**
  * @brief   Total number of sensors on QTR line sensor.
  */
-#define LS_NUM_SENSORS   8     // number of sensors used
+#define LS_NUM_SENSORS 8 // number of sensors used
 
 /**
  * @brief   Represent the left push button on the launchpad
  */
-#define LP_LEFT_BTN  PUSH2
+#define LP_LEFT_BTN PUSH2
 
 /**
  * @brief   Represent the right push button on the launchpad
  */
-#define LP_RIGHT_BTN  PUSH1
+#define LP_RIGHT_BTN PUSH1
 
 /**
  * @brief   Total number of bump switches.
@@ -55,6 +55,29 @@
  * @brief   Used to specify that the robot is running on a floor darker than the line
  */
 #define LIGHT_LINE 1
+
+/**
+ * @brief Used to specify Serial print logging levels
+ */
+enum logLevels
+{
+	/**
+	 * @brief Logging level which used for targeted debugging (reduced output to only those tagged with this log level)
+	 */
+	SPECIAL_1,
+	/**
+	 * @brief Logging level which only outputs code-essential logs
+	 */
+	NONE,
+	/**
+	 * @brief Logging level which outputs streamlined information
+	 */
+	INFO,
+	/**
+	 * @brief Logging level which outputs all written serial prints
+	 */
+	DEBUG
+};
 
 /// \brief Performs a variety of initialization needed for the RSLK.
 ///
@@ -114,8 +137,8 @@ void readLineSensor(uint16_t *sensor);
 /// - When the line is dark then calibration subtracts sensorMax values from the sensor value read.
 /// - When the line is light then calibration subtracts sensorMin values from the sensor value read.
 /// Then the value is subtracted from 1000 to provide a consistent scale.
-void readCalLineSensor(uint16_t* sensor,
-					   uint16_t* calVal,
+void readCalLineSensor(uint16_t *sensor,
+					   uint16_t *calVal,
 					   uint16_t *sensorMin,
 					   uint16_t *sensorMax,
 					   uint8_t mode);
@@ -138,7 +161,7 @@ void readCalLineSensor(uint16_t* sensor,
 ///
 ///  Using calibrated line sensor value this function provides a numerical value indicating
 ///  where the robot is detecting the line. This function can be overridden.
-uint32_t getLinePosition(uint16_t* calVal, uint8_t mode);
+uint32_t getLinePosition(uint16_t *calVal, uint8_t mode);
 
 /// \brief Provide default values for the sensor's Min and Max arrays.
 ///
@@ -149,7 +172,7 @@ uint32_t getLinePosition(uint16_t* calVal, uint8_t mode);
 ///  All elements will by default be given a value of 0.
 ///
 ///  Initializes arrays to be used to store line sensor's min and max values.
-void clearMinMax(uint16_t *sensorMin,uint16_t *sensorMax);
+void clearMinMax(uint16_t *sensorMin, uint16_t *sensorMax);
 
 /// \brief Update line sensor's min and max values array based on current data.
 ///
@@ -161,5 +184,137 @@ void clearMinMax(uint16_t *sensorMin,uint16_t *sensorMax);
 ///
 ///  Take the current line sensor values and update min and max values. This function along with the
 ///  min and max arrays are useful when performing calibration.
-void setSensorMinMax(uint16_t *sensor,uint16_t *sensorMin,uint16_t *sensorMax);
+void setSensorMinMax(uint16_t *sensor, uint16_t *sensorMin, uint16_t *sensorMax);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] s the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(const String &s, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] str the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(const char str[], logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] c the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(char c, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] b the value to print.
+///
+/// \param[in] base the base of the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(unsigned char b, int base, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] n the value to print.
+///
+/// \param[in] base the base of the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(int n, int base, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] n the value to print.
+///
+/// \param[in] base the base of the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(unsigned int n, int base, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] n the value to print.
+///
+/// \param[in] base the base of the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(long n, int base, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] n the value to print.
+///
+/// \param[in] base the base of the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(unsigned long n, int base, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] n the value to print.
+///
+/// \param[in] digits the number of digits to print from n.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(float n, int digits, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
+
+/// \brief Logging using Serial print and println with adaptable log levels.
+///
+/// \param[in] x the value to print.
+///
+/// \param[in] scriptLevel the current logging level set by the script.
+///
+/// \param[in] printLevel the logging level for this print statement.
+///
+/// \param[in] ln whether to use println or print (true will use println)
+///
+void customLog(const Printable& x, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false);
 #endif
