@@ -45,7 +45,7 @@ enum subStates // system status
 int substateComplete; // which state has been completed 0:none, 1:init, 2:reached exit condition, 3:finished exit command
 int turnRotations = 0;
 #define LEFT 0
-#define RIGHT 0
+#define RIGHT 1
 int turnDirection = LEFT; // 0:left, 1:right
 states curr_state;
 subStates curr_substate;
@@ -58,13 +58,13 @@ void setup()
 
   setupLed(RED_LED);
 
-  pinMode(PUSH2, INPUT_PULLDOWN);       // left launchpad button
-  pinMode(BP_SW_PIN_0, INPUT_PULLDOWN); // FR
-  pinMode(BP_SW_PIN_1, INPUT_PULLDOWN); // R
-  pinMode(BP_SW_PIN_2, INPUT_PULLDOWN); // MR
-  pinMode(BP_SW_PIN_3, INPUT_PULLDOWN); // ML
-  pinMode(BP_SW_PIN_4, INPUT_PULLDOWN); // L
-  pinMode(BP_SW_PIN_5, INPUT_PULLDOWN); // FL
+  pinMode(PUSH2, INPUT_PULLUP);       // left launchpad button
+  pinMode(BP_SW_PIN_0, INPUT_PULLUP); // FR
+  pinMode(BP_SW_PIN_1, INPUT_PULLUP); // R
+  pinMode(BP_SW_PIN_2, INPUT_PULLUP); // MR
+  pinMode(BP_SW_PIN_3, INPUT_PULLUP); // ML
+  pinMode(BP_SW_PIN_4, INPUT_PULLUP); // L
+  pinMode(BP_SW_PIN_5, INPUT_PULLUP); // FL
 
   curr_state = KEEP_DRIVING; // Initalize the current state to the default, keep driving.
   curr_substate = NONE;      // Initalize the current substate to the default, none.
@@ -73,7 +73,7 @@ void setup()
 void loop()
 {
   // read global sensors
-  lpButtonValue = digitalRead(PUSH2);
+  lpButtonValue = 1-digitalRead(PUSH2);
   Serial.print("LP BTN: ");
   Serial.print(lpButtonValue);
   // check on/off button toggle
@@ -91,12 +91,12 @@ void loop()
   {
 
     // read sensors when toggled on
-    bpRight[0] = digitalRead(BP_SW_PIN_0);
-    bpRight[1] = digitalRead(BP_SW_PIN_1);
-    bpRight[2] = digitalRead(BP_SW_PIN_2);
-    bpLeft[0] = digitalRead(BP_SW_PIN_3);
-    bpLeft[1] = digitalRead(BP_SW_PIN_4);
-    bpLeft[2] = digitalRead(BP_SW_PIN_5);
+    bpRight[0] = 1-digitalRead(BP_SW_PIN_0);
+    bpRight[1] = 1-digitalRead(BP_SW_PIN_1);
+    bpRight[2] = 1-digitalRead(BP_SW_PIN_2);
+    bpLeft[0] = 1-digitalRead(BP_SW_PIN_3);
+    bpLeft[1] = 1-digitalRead(BP_SW_PIN_4);
+    bpLeft[2] = 1-digitalRead(BP_SW_PIN_5);
 
     leftCount = getEncoderLeftCnt();
     rightCount = getEncoderRightCnt();
