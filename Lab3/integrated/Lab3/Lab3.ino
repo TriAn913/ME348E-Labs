@@ -9,11 +9,11 @@
   The code below is non-blocking with a hard-coded delay of 2ms per loop. */
 
 bool onToggle = false; // toggle all functions on/off (off disables all motors)
-int lpButtonValue;     // launchpad left button
-int lpButtonLastValue;
+bool lpButtonValue;    // launchpad left button
+bool lpButtonLastValue;
 
-int motorSpeed = 10;
-static const float wheelDiameter = 2.7559055;
+uint16_t motorSpeed = 10;
+// static const float wheelDiameter = 2.7559055;
 
 // encoder counts
 int leftCount;
@@ -29,10 +29,8 @@ uint32_t linePos = 0;
 uint8_t interCounts; // number of intersections counted
 bool prevInter;      // false: was not on intersection last loop, true: was on intersection last loop
 bool onInter;
-#define maxVal 900
-#define minVal 1100
-static const int maxWhite[8] = {maxVal, maxVal, maxVal, maxVal, maxVal, maxVal, maxVal, maxVal};
-static const int minBlack[8] = {minVal, minVal, minVal, minVal, minVal, minVal, minVal, minVal};
+#define MAX_VAL 900
+#define MIN_VAL 1100
 
 // linefollower PID
 double error;
@@ -57,14 +55,47 @@ enum states // operational state
 states curr_state[1];
 
 // substates
-int substate; // which substate is active 0:none, 1:init, 2:main, 3:exit, 4:finished
+int substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4:finished
 
 int turnRotations;
 #define LEFT 0
 #define RIGHT 1
 #define NINETY_DEG_TURN 180
 #define ONE_EIGHTY_DEG_TURN 360
-int turnDirection; // 0:left, 1:right
+uint8_t turnDirection; // 0:left, 1:right
+
+void setDefaults()
+{
+  // lp button values
+  lpButtonValue = 0; // launchpad left button
+  lpButtonLastValue = 0;
+
+  // line follower values
+  interCounts = 0;
+  prevInter = false;
+  onInter = false;
+
+  // line follower PID
+  error = 0;
+  prevError = 0;
+  integral = 0;
+  deriv = 0;
+  output = 0;
+  kp, ki, kd = 1 / 7 / 20, 0, 0.1 / 7 / 20;
+
+  // encoder counts
+  leftCount = 0;
+  rightCount = 0;
+
+  // turning
+  turnRotations = 0;
+  turnDirection = LEFT; // 0:left, 1:right
+
+  // states and substates
+  curr_state[0] = LINE_A;
+  curr_state[1] = NONE;
+  substate = 0;
+}
 
 void setup()
 {
@@ -76,7 +107,11 @@ void setup()
 
   pinMode(PUSH2, INPUT_PULLDOWN); // left launchpad button
 
-  clearMinMax(sensorMinVal, sensorMaxVal);
+  for (int x = 0; x < LS_NUM_SENSORS; x++)
+  {
+    sensorMinVal[x] = MIN_VAL;
+    sensorMaxVal[x] = MAX_VAL;
+  }
 
   setDefaults();
 }
@@ -117,9 +152,28 @@ void loop()
     /*PRINT PIN STATE FOR DEBUGGING PURPOSES*/
     Serial.print(" st:");
     Serial.print(curr_state[0]);
+    Serial.print(" subst:");
+    Serial.print(substate);
     Serial.print(" output:");
     Serial.print(output);
-    Serial.print(" LF:[");
+    Serial.print(" LF_cal:[");
+    Serial.print(sensorCalVal[0]); // the left-most sensor if facing same direction as robot
+    Serial.print(",");
+    Serial.print(sensorCalVal[1]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[2]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[3]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[4]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[5]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[6]);
+    Serial.print(",");
+    Serial.print(sensorCalVal[7]);
+    Serial.print("]");
+    Serial.print(" LF_raw:[");
     Serial.print(sensorVal[0]); // the left-most sensor if facing same direction as robot
     Serial.print(",");
     Serial.print(sensorVal[1]);
@@ -154,7 +208,8 @@ void loop()
       else if (substate == 1)
       {
         checkIntersection();
-
+        Serial.print(" interCnt:");
+        Serial.print(interCounts);
         // exit condition check
         if (interCounts >= 2)
         {
@@ -266,8 +321,8 @@ void loop()
       disableMotor(BOTH_MOTORS);
       break;
     }
-    } // end switch case 
-  } // end toggle on
+    } // end switch case
+  }   // end toggle on
   else
   { // toggle off
     disableMotor(BOTH_MOTORS);
@@ -328,7 +383,7 @@ void checkIntersection()
   // check to see if on intersection
   for (int i = 0; i < 8; i++)
   {
-    if (sensorCalVal[i] > maxWhite[i])
+    if (sensorCalVal[i] > MAX_VAL)
     {
       onInter = true;
     }
@@ -349,37 +404,4 @@ void checkIntersection()
   { // from on line to not on line
     prevInter = false;
   }
-}
-
-void setDefaults()
-{
-  // lp button values
-  lpButtonValue = 0; // launchpad left button
-  lpButtonLastValue = 0;
-
-  // line follower values
-  interCounts = 0;
-  prevInter = false;
-  onInter = false;
-
-  // line follower PID
-  error = 0;
-  prevError = 0;
-  integral = 0;
-  deriv = 0;
-  output = 0;
-  kp, ki, kd = 1 / 7 / 20, 0, 0.1 / 7 / 20;
-
-  // encoder counts
-  leftCount = 0;
-  rightCount = 0;
-
-  // turning
-  turnRotations = 0;
-  turnDirection = LEFT; // 0:left, 1:right
-
-  // states and substates
-  curr_state[0] = LINE_A;
-  curr_state[1] = NONE;
-  substate = 0;
 }

@@ -84,8 +84,8 @@ void clearMinMax(uint16_t *sensorMin, uint16_t *sensorMax)
 {
 	for (int x = 0; x < LS_NUM_SENSORS; x++)
 	{
-		sensorMin[x] = 9000;
-		sensorMax[x] = 0;
+		sensorMin[x] = 1100;
+		sensorMax[x] = 900;
 	}
 }
 
