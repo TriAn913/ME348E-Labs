@@ -8,16 +8,16 @@
 /* notes:
   The code below is non-blocking with a hard-coded delay of 2ms per loop. */
 
-bool onToggle = false; // toggle all functions on/off (off disables all motors)
-bool lpButtonValue;    // launchpad left button
-bool lpButtonLastValue;
+bool onToggle = false;  // toggle all functions on/off (off disables all motors)
+bool lpButtonValue;     // launchpad left button
+bool lpButtonLastValue; // the value of the launchpad left button value the last time checked
 
 uint16_t motorSpeed = 10;
 // static const float wheelDiameter = 2.7559055;
 
 // encoder counts
-int leftCount;
-int rightCount;
+uint32_t leftCount;
+uint32_t rightCount;
 
 // line follower
 uint16_t sensorVal[LS_NUM_SENSORS];
@@ -25,22 +25,24 @@ uint16_t sensorCalVal[LS_NUM_SENSORS];
 uint16_t sensorMaxVal[LS_NUM_SENSORS];
 uint16_t sensorMinVal[LS_NUM_SENSORS];
 uint8_t lineColor = DARK_LINE;
-uint32_t linePos = 0;
-uint8_t interCounts; // number of intersections counted
-bool prevInter;      // false: was not on intersection last loop, true: was on intersection last loop
-bool onInter;
+uint32_t linePos = 9999;
+uint8_t interCounts; // number of intersections crossed
+bool prevInter;      // whether was on intersection last time checked (true: was on intersection; false: was not on intersection)
+bool onInter;        // is on intersection (true: on intersection; false: not on intersection)
 #define MAX_VAL 900
 #define MIN_VAL 1100
 
 // linefollower PID
-double error;
-double prevError;
-static const double setpoint = 3500;
-static const double dt = 0.1;
-double integral;
-double deriv;
-double output;
-double kp, ki, kd;
+uint32_t error;
+uint32_t prevError;
+static const uint32_t setpoint = 3500;
+static const float dt = 0.1f;
+float integral;
+float deriv;
+uint16_t output;
+static const float kp = 1.0f / 3.5f / 100.0f; // error of 3500 (max) returns 10
+static const float ki = 0;
+static const float kd = 0.1f / 3.5f / 100.0f;
 
 // states
 enum states // operational state
@@ -55,7 +57,7 @@ enum states // operational state
 states curr_state[1];
 
 // substates
-int substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4:finished
+uint8_t substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4:finished
 
 int turnRotations;
 #define LEFT 0
@@ -67,26 +69,13 @@ uint8_t turnDirection; // 0:left, 1:right
 void setDefaults()
 {
   // lp button values
-  lpButtonValue = 0; // launchpad left button
+  lpButtonValue = 0; // launchpad left button value
   lpButtonLastValue = 0;
 
-  // line follower values
-  interCounts = 0;
-  prevInter = false;
-  onInter = false;
-
-  // line follower PID
-  error = 0;
-  prevError = 0;
-  integral = 0;
-  deriv = 0;
-  output = 0;
-  kp, ki, kd = 1 / 7 / 20, 0, 0.1 / 7 / 20;
-
-  // encoder counts
-  leftCount = 0;
-  rightCount = 0;
-
+  setDefaultsIntersection();
+  setDefaultsLFPID();
+  setDefaultsEncoderCnts();
+  
   // turning
   turnRotations = 0;
   turnDirection = LEFT; // 0:left, 1:right
@@ -95,6 +84,31 @@ void setDefaults()
   curr_state[0] = LINE_A;
   curr_state[1] = NONE;
   substate = 0;
+
+}
+
+void setDefaultsIntersection() {
+  // line follower intersection values
+  interCounts = 0;
+  prevInter = false;
+  onInter = false;
+}
+
+void setDefaultsLFPID() {
+  // line follower PID
+  error = 0;
+  prevError = 0;
+  integral = 0;
+  deriv = 0;
+  output = 0;
+}
+
+void setDefaultsEncoderCnts() {
+  // encoder counts
+  leftCount = 0;
+  rightCount = 0;
+  resetLeftEncoderCnt();
+  resetRightEncoderCnt();
 }
 
 void setup()
@@ -107,7 +121,7 @@ void setup()
 
   pinMode(PUSH2, INPUT_PULLDOWN); // left launchpad button
 
-  for (int x = 0; x < LS_NUM_SENSORS; x++)
+  for (uint8_t x = 0; x < LS_NUM_SENSORS; x++)
   {
     sensorMinVal[x] = MIN_VAL;
     sensorMaxVal[x] = MAX_VAL;
@@ -144,7 +158,7 @@ void loop()
                       sensorMaxVal,
                       lineColor);
 
-    linePos = getLinePosition(sensorCalVal, lineColor);
+    linePos = getLinePosition2(sensorCalVal, lineColor);
     //    encoder
     leftCount = getEncoderLeftCnt();
     rightCount = getEncoderRightCnt();
@@ -208,36 +222,49 @@ void loop()
       else if (substate == 1)
       {
         checkIntersection();
+
         Serial.print(" interCnt:");
         Serial.print(interCounts);
+
         // exit condition check
         if (interCounts >= 2)
         {
           substate = 2;
         }
 
-        computePID();
+        if (!onInter && linePos != 9999)
+        {
+          computePID();
 
-        // set motors based on PID and base value
-        setMotorSpeed(LEFT_MOTOR, motorSpeed + output);
-        setMotorSpeed(RIGHT_MOTOR, motorSpeed - output);
+          // set motors based on PID and base value
+          if (motorSpeed + output > 0)
+          {
+            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
+          }
+          else
+          {
+            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+          }
+          if (motorSpeed - output > 0)
+          {
+            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
+          }
+          else
+          {
+            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+          }
+          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed + output));
+          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed - output));
+        }
       }
-
       // exit function
       else if (substate == 2)
       {
         curr_state[1] = curr_state[0];
         curr_state[0] = TURN;
 
-        interCounts = 0;
-        error = 0;
-        prevError = 0;
-        integral = 0;
-        deriv = 0;
-        output = 0;
-
-        prevInter = false;
-        onInter = false;
+        setDefaultsLFPID();
+        setDefaultsIntersection();
 
         turnDirection = RIGHT;
         turnRotations = NINETY_DEG_TURN;
@@ -266,11 +293,30 @@ void loop()
           substate = 2;
         }
 
-        computePID();
+        if (!onInter && linePos != 9999)
+        {
+          computePID();
 
-        // set motors based on PID and base value
-        setMotorSpeed(LEFT_MOTOR, motorSpeed + output);
-        setMotorSpeed(RIGHT_MOTOR, motorSpeed - output);
+          // set motors based on PID and base value
+          if (motorSpeed + output > 0)
+          {
+            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
+          }
+          else
+          {
+            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+          }
+          if (motorSpeed - output > 0)
+          {
+            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
+          }
+          else
+          {
+            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+          }
+          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed + output));
+          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed - output));
+        }
       }
 
       // exit function
@@ -279,15 +325,8 @@ void loop()
         curr_state[1] = curr_state[0];
         curr_state[0] = TURN;
 
-        interCounts = 0;
-        error = 0;
-        prevError = 0;
-        integral = 0;
-        deriv = 0;
-        output = 0;
-
-        prevInter = false;
-        onInter = false;
+        setDefaultsLFPID();
+        setDefaultsIntersection();
 
         turnDirection = LEFT;
         turnRotations = NINETY_DEG_TURN;
@@ -337,10 +376,7 @@ void turning()
   // init
   if (substate == 0)
   {
-    resetLeftEncoderCnt();
-    resetRightEncoderCnt();
-    leftCount = 0;
-    rightCount = 0;
+    setDefaultsEncoderCnts();
     if (turnDirection == RIGHT)
     {
       setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
@@ -381,7 +417,7 @@ void computePID()
 void checkIntersection()
 {
   // check to see if on intersection
-  for (int i = 0; i < 8; i++)
+  for (uint8_t i = 0; i < 8; i++)
   {
     if (sensorCalVal[i] > MAX_VAL)
     {
@@ -404,4 +440,44 @@ void checkIntersection()
   { // from on line to not on line
     prevInter = false;
   }
+}
+
+/// \brief Get line position (modified version of getLinePosition())
+/// \param[in] calVal is an array that is filled with the line sensor calibrated values.
+///
+/// \param[in] mode determines if the line is dark or light.
+/// - 0 is used when the line is darker than the floor
+/// - 1 is used when the line is lighter than the floor.
+///
+/// \return value between 0 - 7000.
+///  - 9999 no line detected
+///  - ...
+///  - 0000 line is directly on the left most sensor
+///  - ...
+///  - 3500 line directly over two middle sensors.
+///  - ...
+///  - 7000 is under right most line sensor
+///
+///  Using calibrated line sensor value this function provides a numerical value indicating
+///  where the robot is detecting the line. This function can be overridden.
+uint32_t getLinePosition2(uint16_t *calVal, uint8_t mode)
+{
+	uint32_t avg = 0; // this is for the weighted total
+	uint32_t sum = 0; // this is for the denominator, which is <= 64000
+
+	uint32_t _lastPosition;
+	for (uint8_t i = 0; i < LS_NUM_SENSORS; i++)
+	{
+		uint16_t value = calVal[i];
+
+		// only average in values that are above a noise threshold
+		if (value > 50)
+		{
+			avg += (uint32_t)value * (i * 1000);
+			sum += value;
+		}
+	}
+
+	_lastPosition = sum!=0 ? avg / sum : 9999;
+	return _lastPosition;
 }
