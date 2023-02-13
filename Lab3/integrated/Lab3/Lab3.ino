@@ -22,8 +22,8 @@ uint32_t rightCount;
 // line follower
 uint16_t sensorVal[LS_NUM_SENSORS];
 uint16_t sensorCalVal[LS_NUM_SENSORS];
-uint16_t sensorMaxVal[LS_NUM_SENSORS];
-uint16_t sensorMinVal[LS_NUM_SENSORS];
+uint16_t sensorMaxVal[LS_NUM_SENSORS] = {};
+uint16_t sensorMinVal[LS_NUM_SENSORS] = {};
 uint8_t lineColor = DARK_LINE;
 uint32_t linePos = 9999;
 uint8_t interCounts; // number of intersections crossed
@@ -120,12 +120,6 @@ void setup()
   setupLed(RED_LED);
 
   pinMode(PUSH2, INPUT_PULLDOWN); // left launchpad button
-
-  for (uint8_t x = 0; x < LS_NUM_SENSORS; x++)
-  {
-    sensorMinVal[x] = MIN_VAL;
-    sensorMaxVal[x] = MAX_VAL;
-  }
 
   setDefaults();
 }
@@ -232,6 +226,7 @@ void loop()
           substate = 2;
         }
 
+        // PID motor if on line and not on intersection
         if (!onInter && linePos != 9999)
         {
           computePID();
@@ -293,6 +288,7 @@ void loop()
           substate = 2;
         }
 
+        // PID motor if on line and not on intersection
         if (!onInter && linePos != 9999)
         {
           computePID();
