@@ -8,9 +8,9 @@
 /* notes:
   The code below is non-blocking with a hard-coded delay of 2ms per loop. */
 
-bool onToggle = false;  // toggle all functions on/off (off disables all motors)
-bool lpButtonValue;     // launchpad left button
-bool lpButtonLastValue; // the value of the launchpad left button value the last time checked
+bool onToggle = 0;  // toggle all functions on/off (off disables all motors)
+bool lpButtonValue = 0;     // launchpad left button
+bool lpButtonLastValue = 1; // the value of the launchpad left button value the last time checked
 
 uint16_t motorSpeed = 10;
 // static const float wheelDiameter = 2.7559055;
@@ -22,27 +22,25 @@ uint32_t rightCount;
 // line follower
 uint16_t sensorVal[LS_NUM_SENSORS];
 uint16_t sensorCalVal[LS_NUM_SENSORS];
-uint16_t sensorMaxVal[LS_NUM_SENSORS] = {};
-uint16_t sensorMinVal[LS_NUM_SENSORS] = {};
+uint16_t sensorMaxVal[LS_NUM_SENSORS] = {875,858,663,759,588,797,679,950};
+uint16_t sensorMinVal[LS_NUM_SENSORS];
 uint8_t lineColor = DARK_LINE;
 uint32_t linePos = 9999;
 uint8_t interCounts; // number of intersections crossed
 bool prevInter;      // whether was on intersection last time checked (true: was on intersection; false: was not on intersection)
 bool onInter;        // is on intersection (true: on intersection; false: not on intersection)
-#define MAX_VAL 900
-#define MIN_VAL 1100
 
 // linefollower PID
-uint32_t error;
-uint32_t prevError;
+int32_t error;
+int32_t prevError;
 static const uint32_t setpoint = 3500;
 static const float dt = 0.1f;
 float integral;
 float deriv;
-uint16_t output;
+int16_t output;
 static const float kp = 1.0f / 3.5f / 100.0f; // error of 3500 (max) returns 10
 static const float ki = 0;
-static const float kd = 0.1f / 3.5f / 100.0f;
+static const float kd = -0.2f / 3.5f / 100.0f;
 
 // states
 enum states // operational state
@@ -62,16 +60,12 @@ uint8_t substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4
 int turnRotations;
 #define LEFT 0
 #define RIGHT 1
-#define NINETY_DEG_TURN 180
+#define NINETY_DEG_TURN 170
 #define ONE_EIGHTY_DEG_TURN 360
 uint8_t turnDirection; // 0:left, 1:right
 
 void setDefaults()
 {
-  // lp button values
-  lpButtonValue = 0; // launchpad left button value
-  lpButtonLastValue = 0;
-
   setDefaultsIntersection();
   setDefaultsLFPID();
   setDefaultsEncoderCnts();
@@ -90,7 +84,7 @@ void setDefaults()
 void setDefaultsIntersection() {
   // line follower intersection values
   interCounts = 0;
-  prevInter = false;
+  prevInter = true;
   onInter = false;
 }
 
@@ -119,7 +113,7 @@ void setup()
 
   setupLed(RED_LED);
 
-  pinMode(PUSH2, INPUT_PULLDOWN); // left launchpad button
+  pinMode(PUSH2, INPUT_PULLUP); // left launchpad button
 
   setDefaults();
 }
@@ -164,40 +158,48 @@ void loop()
     Serial.print(substate);
     Serial.print(" output:");
     Serial.print(output);
-    Serial.print(" LF_cal:[");
-    Serial.print(sensorCalVal[0]); // the left-most sensor if facing same direction as robot
-    Serial.print(",");
-    Serial.print(sensorCalVal[1]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[2]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[3]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[4]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[5]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[6]);
-    Serial.print(",");
-    Serial.print(sensorCalVal[7]);
-    Serial.print("]");
-    Serial.print(" LF_raw:[");
-    Serial.print(sensorVal[0]); // the left-most sensor if facing same direction as robot
-    Serial.print(",");
-    Serial.print(sensorVal[1]);
-    Serial.print(",");
-    Serial.print(sensorVal[2]);
-    Serial.print(",");
-    Serial.print(sensorVal[3]);
-    Serial.print(",");
-    Serial.print(sensorVal[4]);
-    Serial.print(",");
-    Serial.print(sensorVal[5]);
-    Serial.print(",");
-    Serial.print(sensorVal[6]);
-    Serial.print(",");
-    Serial.print(sensorVal[7]);
-    Serial.print("]");
+    Serial.print(" er:");
+    Serial.print(error);
+    Serial.print(" i:");
+    Serial.print(integral);
+    Serial.print(" d:");
+    Serial.print(deriv);
+    Serial.print(" linePos:");
+    Serial.print(linePos);
+    // Serial.print(" LF_cal:[");
+    // Serial.print(sensorCalVal[0]); // the left-most sensor if facing same direction as robot
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[1]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[2]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[3]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[4]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[5]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[6]);
+    // Serial.print(",");
+    // Serial.print(sensorCalVal[7]);
+    // Serial.print("]");
+//    Serial.print(" LF_raw:[");
+//    Serial.print(sensorVal[0]); // the left-most sensor if facing same direction as robot
+//    Serial.print(",");
+//    Serial.print(sensorVal[1]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[2]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[3]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[4]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[5]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[6]);
+//    Serial.print(",");
+//    Serial.print(sensorVal[7]);
+//    Serial.print("]");
 
     // command states
     switch (curr_state[0])
@@ -207,6 +209,7 @@ void loop()
       // init function
       if (substate == 0)
       {
+        Serial.print("EEEEE");
         enableMotor(BOTH_MOTORS);
         setMotorDirection(BOTH_MOTORS, MOTOR_DIR_FORWARD);
         setMotorSpeed(BOTH_MOTORS, motorSpeed);
@@ -232,7 +235,7 @@ void loop()
           computePID();
 
           // set motors based on PID and base value
-          if (motorSpeed + output > 0)
+          if (motorSpeed - output > 0)
           {
             setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
           }
@@ -240,7 +243,7 @@ void loop()
           {
             setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
           }
-          if (motorSpeed - output > 0)
+          if (motorSpeed + output > 0)
           {
             setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
           }
@@ -248,8 +251,8 @@ void loop()
           {
             setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
           }
-          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed + output));
-          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed - output));
+          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed - output));
+          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed + output));
         }
       }
       // exit function
@@ -266,6 +269,7 @@ void loop()
 
         substate = 0;
       }
+      break;
     }
     case LINE_B:
     {
@@ -294,7 +298,7 @@ void loop()
           computePID();
 
           // set motors based on PID and base value
-          if (motorSpeed + output > 0)
+          if (motorSpeed - output > 0)
           {
             setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
           }
@@ -302,7 +306,7 @@ void loop()
           {
             setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
           }
-          if (motorSpeed - output > 0)
+          if (motorSpeed + output > 0)
           {
             setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
           }
@@ -310,8 +314,8 @@ void loop()
           {
             setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
           }
-          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed + output));
-          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed - output));
+          setMotorSpeed(LEFT_MOTOR, abs(motorSpeed - output));
+          setMotorSpeed(RIGHT_MOTOR, abs(motorSpeed + output));
         }
       }
 
@@ -329,6 +333,7 @@ void loop()
 
         substate = 0;
       }
+      break;
     }
     case TURN:
     {
@@ -350,6 +355,7 @@ void loop()
         }
         substate = 0;
       }
+      break;
     }
     case STOP:
     {
@@ -404,9 +410,11 @@ void turning()
 void computePID()
 {
   error = setpoint - linePos;
-  integral += error * dt;
-  deriv = (prevError - error) / dt;
-  output = kp * error + ki * integral + kd * deriv;
+   integral += (float)error * dt;
+   deriv = (float)(prevError - error) / dt;
+   output = kp * (float)error + ki * integral + kd * deriv;
+
+  //output = kp * (float)error;
   prevError = error;
 }
 
@@ -415,7 +423,7 @@ void checkIntersection()
   // check to see if on intersection
   for (uint8_t i = 0; i < 8; i++)
   {
-    if (sensorCalVal[i] > MAX_VAL)
+    if (sensorCalVal[i] > 400)
     {
       onInter = true;
     }
@@ -467,7 +475,7 @@ uint32_t getLinePosition2(uint16_t *calVal, uint8_t mode)
 		uint16_t value = calVal[i];
 
 		// only average in values that are above a noise threshold
-		if (value > 50)
+		if (value > 150)
 		{
 			avg += (uint32_t)value * (i * 1000);
 			sum += value;
