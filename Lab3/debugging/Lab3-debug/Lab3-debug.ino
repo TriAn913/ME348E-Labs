@@ -198,38 +198,3 @@ uint32_t getLinePosition2(uint16_t *calVal, uint8_t mode)
   _lastPosition = sum != 0 ? avg / sum : 9999;
   return _lastPosition;
 }
-
-
-void turning()
-{
-  // init
-  if (substate == 0)
-  {
-    setDefaultsEncoderCnts();
-    if (turnDirection == RIGHT)
-    {
-      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
-      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
-    }
-    else
-    {
-      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
-      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
-    }
-    setMotorSpeed(BOTH_MOTORS, motorSpeed);
-    substate = 1;
-  }
-  // main
-  else if (substate == 1)
-  {
-    if (leftCount > turnRotations)
-    {
-      substate = 2;
-      setMotorSpeed(BOTH_MOTORS, 0);
-    }
-  }
-  // exit
-  else if (substate == 2)
-  {
-  }
-}

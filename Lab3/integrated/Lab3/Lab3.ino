@@ -8,7 +8,7 @@
 /* notes:
   The code below is non-blocking with a hard-coded delay of 2ms per loop. */
 
-bool onToggle = 0;  // toggle all functions on/off (off disables all motors)
+bool onToggle = 0;          // toggle all functions on/off (off disables all motors)
 bool lpButtonValue = 0;     // launchpad left button
 bool lpButtonLastValue = 1; // the value of the launchpad left button value the last time checked
 
@@ -22,7 +22,7 @@ uint32_t rightCount;
 // line follower
 uint16_t sensorVal[LS_NUM_SENSORS];
 uint16_t sensorCalVal[LS_NUM_SENSORS];
-uint16_t sensorMaxVal[LS_NUM_SENSORS] = {875,858,663,759,588,797,679,950};
+uint16_t sensorMaxVal[LS_NUM_SENSORS] = {875, 858, 663, 759, 588, 797, 679, 950};
 uint16_t sensorMinVal[LS_NUM_SENSORS];
 uint8_t lineColor = DARK_LINE;
 uint32_t linePos = 9999;
@@ -38,9 +38,9 @@ static const float dt = 0.1f;
 float integral;
 float deriv;
 int16_t output;
-static const float kp = 1.0f / 3.5f / 100.0f; // error of 3500 (max) returns 10
-static const float ki = 0;
-static const float kd = -0.2f / 3.5f / 100.0f;
+static const float kp = 1.0f / 3.5f / 100.0f;  // error of 3500 (max) returns 10
+static const float ki = 0;                     // not needed for this application (would be useful if needed constant power at the setpoint)
+static const float kd = -0.2f / 3.5f / 100.0f; // used to prevent oscillations
 
 // states
 enum states // operational state
@@ -52,7 +52,7 @@ enum states // operational state
   STOP
 };
 
-states curr_state[1];
+states curr_state[1]; // [0] is the current state, [1] is the previous state
 
 // substates
 uint8_t substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4:finished
@@ -61,7 +61,7 @@ int turnRotations;
 #define LEFT 0
 #define RIGHT 1
 #define NINETY_DEG_TURN 170
-#define ONE_EIGHTY_DEG_TURN 360
+#define ONE_EIGHTY_DEG_TURN 340
 uint8_t turnDirection; // 0:left, 1:right
 
 void setDefaults()
@@ -69,7 +69,7 @@ void setDefaults()
   setDefaultsIntersection();
   setDefaultsLFPID();
   setDefaultsEncoderCnts();
-  
+
   // turning
   turnRotations = 0;
   turnDirection = LEFT; // 0:left, 1:right
@@ -78,17 +78,18 @@ void setDefaults()
   curr_state[0] = LINE_A;
   curr_state[1] = NONE;
   substate = 0;
-
 }
 
-void setDefaultsIntersection() {
+void setDefaultsIntersection()
+{
   // line follower intersection values
   interCounts = 0;
   prevInter = true;
   onInter = false;
 }
 
-void setDefaultsLFPID() {
+void setDefaultsLFPID()
+{
   // line follower PID
   error = 0;
   prevError = 0;
@@ -97,7 +98,8 @@ void setDefaultsLFPID() {
   output = 0;
 }
 
-void setDefaultsEncoderCnts() {
+void setDefaultsEncoderCnts()
+{
   // encoder counts
   leftCount = 0;
   rightCount = 0;
@@ -183,23 +185,23 @@ void loop()
     // Serial.print(",");
     // Serial.print(sensorCalVal[7]);
     // Serial.print("]");
-//    Serial.print(" LF_raw:[");
-//    Serial.print(sensorVal[0]); // the left-most sensor if facing same direction as robot
-//    Serial.print(",");
-//    Serial.print(sensorVal[1]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[2]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[3]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[4]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[5]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[6]);
-//    Serial.print(",");
-//    Serial.print(sensorVal[7]);
-//    Serial.print("]");
+    // Serial.print(" LF_raw:[");
+    // Serial.print(sensorVal[0]); // the left-most sensor if facing same direction as robot
+    // Serial.print(",");
+    // Serial.print(sensorVal[1]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[2]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[3]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[4]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[5]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[6]);
+    // Serial.print(",");
+    // Serial.print(sensorVal[7]);
+    // Serial.print("]");
 
     // command states
     switch (curr_state[0])
@@ -209,7 +211,6 @@ void loop()
       // init function
       if (substate == 0)
       {
-        Serial.print("EEEEE");
         enableMotor(BOTH_MOTORS);
         setMotorDirection(BOTH_MOTORS, MOTOR_DIR_FORWARD);
         setMotorSpeed(BOTH_MOTORS, motorSpeed);
@@ -410,11 +411,11 @@ void turning()
 void computePID()
 {
   error = setpoint - linePos;
-   integral += (float)error * dt;
-   deriv = (float)(prevError - error) / dt;
-   output = kp * (float)error + ki * integral + kd * deriv;
+  integral += (float)error * dt;
+  deriv = (float)(prevError - error) / dt;
+  output = kp * (float)error + ki * integral + kd * deriv;
 
-  //output = kp * (float)error;
+  // output = kp * (float)error; // will oscillate if used
   prevError = error;
 }
 
@@ -466,22 +467,22 @@ void checkIntersection()
 ///  where the robot is detecting the line. This function can be overridden.
 uint32_t getLinePosition2(uint16_t *calVal, uint8_t mode)
 {
-	uint32_t avg = 0; // this is for the weighted total
-	uint32_t sum = 0; // this is for the denominator, which is <= 64000
+  uint32_t avg = 0; // this is for the weighted total
+  uint32_t sum = 0; // this is for the denominator, which is <= 64000
 
-	uint32_t _lastPosition;
-	for (uint8_t i = 0; i < LS_NUM_SENSORS; i++)
-	{
-		uint16_t value = calVal[i];
+  uint32_t _lastPosition;
+  for (uint8_t i = 0; i < LS_NUM_SENSORS; i++)
+  {
+    uint16_t value = calVal[i];
 
-		// only average in values that are above a noise threshold
-		if (value > 150)
-		{
-			avg += (uint32_t)value * (i * 1000);
-			sum += value;
-		}
-	}
+    // only average in values that are above a noise threshold
+    if (value > 150)
+    {
+      avg += (uint32_t)value * (i * 1000);
+      sum += value;
+    }
+  }
 
-	_lastPosition = sum!=0 ? avg / sum : 9999;
-	return _lastPosition;
+  _lastPosition = sum != 0 ? avg / sum : 9999;
+  return _lastPosition;
 }
