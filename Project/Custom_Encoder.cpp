@@ -25,7 +25,7 @@ int32_t Custom_Encoder::getEncoderCnt()
     return enc_cnt;
 }
 
-void Custom_Encoder::resetLeftEncoderCnt()
+void Custom_Encoder::resetEncoderCnt()
 {
     enc_cnt = 0;
 }

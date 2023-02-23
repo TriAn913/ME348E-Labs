@@ -2,6 +2,7 @@
 #include <RSLK_Pins.h>
 #include <QTRSensors.h>
 #include <GP2Y0A21_Sensor.h>
+#include "Custom_Encoder.h"
 
 #ifndef definitions_h
 #define definitions_h
@@ -143,7 +144,7 @@ void readCalLineSensor(uint16_t *sensor,
 					   uint16_t *sensorMax,
 					   uint8_t mode);
 
-/// \brief Get line position
+/// \brief Get line position (modified version of getLinePosition() from SimpleRSLK)
 /// \param[in] calVal is an array that is filled with the line sensor calibrated values.
 ///
 /// \param[in] mode determines if the line is dark or light.
@@ -151,9 +152,9 @@ void readCalLineSensor(uint16_t *sensor,
 /// - 1 is used when the line is lighter than the floor.
 ///
 /// \return value between 0 - 7000.
-///  - 0 no line detected
+///  - 9999 no line detected
 ///  - ...
-///  - 1000 line is directly on the left most sensor
+///  - 0000 line is directly on the left most sensor
 ///  - ...
 ///  - 3500 line directly over two middle sensors.
 ///  - ...

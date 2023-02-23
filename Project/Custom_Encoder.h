@@ -37,6 +37,6 @@ public:
 
 	/// \brief Set the encoder tick count to 0
 	///
-	void resetLeftEncoderCnt();
+	void resetEncoderCnt();
 };
 #endif
