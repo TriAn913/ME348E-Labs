@@ -1,105 +1,8 @@
 #include "definitions.h"
 
-GP2Y0A21_Sensor dst_sensor[3];
-
-// line follower
-QTRSensors qtr;
-uint16_t sensorVal[LS_NUM_SENSORS];
-uint16_t sensorCalVal[LS_NUM_SENSORS];
-uint16_t sensorMaxVal[LS_NUM_SENSORS] = {875, 858, 663, 759, 588, 797, 679, 950};
-uint16_t sensorMinVal[LS_NUM_SENSORS];
-uint8_t lineColor = DARK_LINE;
-uint32_t linePos = 9999;
-uint8_t interCounts; // number of intersections crossed
-bool prevInter;      // whether was on intersection last time checked (true: was on intersection; false: was not on intersection)
-bool onInter;        // is on intersection (true: on intersection; false: not on intersection)
-
-// linefollower PID
-int32_t error;
-int32_t prevError;
-static const uint32_t setpoint = 3500;
-static const float dt = 0.1f;
-float integral;
-float deriv;
-int16_t output;
-static const float kp = 1.0f / 3.5f / 100.0f;  // error of 3500 (max) returns 10
-static const float ki = 0;                     // not needed for this application (would be useful if needed constant power at the setpoint)
-static const float kd = -0.2f / 3.5f / 100.0f; // used to prevent oscillations
-
-// launchpad left button (toggle on/off)
-bool onToggle = 0;          // toggle all functions on/off (off disables all motors)
-bool lpButtonValue = 0;     // launchpad left button
-bool lpButtonLastValue = 1; // the value of the launchpad left button value the last time checked
-
-// encoder
-Custom_Encoder encoder[2];
-uint32_t leftCount; // left motor encoder count
-uint32_t rightCount; // right motor encoder count
-
-// states
-enum states // operational state
-{
-  NONE_,
-  LINE_A,
-  LINE_B,
-  TURN,
-  STOP
-};
-states curr_state[1]; // [0] is the current state, [1] is the previous state
-
-// substates
-uint8_t substate; // which substate is active; 0:none, 1:init, 2:main, 3:exit, 4:finished
-
-// turn function parameters
-int turnRotations;
-#define LEFT 0
-#define RIGHT 1
-#define NINETY_DEG_TURN 170
-#define ONE_EIGHTY_DEG_TURN 340
-uint8_t turnDirection; // 0:left, 1:right
-
-void setDefaults()
-{
-  setDefaultsIntersection();
-  setDefaultsLFPID();
-  setDefaultsEncoderCnts();
-
-  // turning
-  turnRotations = 0;
-  turnDirection = LEFT; // 0:left, 1:right
-
-  // states and substates
-  curr_state[0] = LINE_A;
-  curr_state[1] = NONE_;
-  substate = 0;
-}
-
-void setDefaultsIntersection()
-{
-  // line follower intersection values
-  interCounts = 0;
-  prevInter = true;
-  onInter = false;
-}
-
-void setDefaultsLFPID()
-{
-  // line follower PID
-  error = 0;
-  prevError = 0;
-  integral = 0;
-  deriv = 0;
-  output = 0;
-}
-
-void setDefaultsEncoderCnts()
-{
-  // encoder counts
-  leftCount = 0;
-  rightCount = 0;
-  encoder[0].resetEncoderCnt();
-  encoder[1].resetEncoderCnt();
-}
+GP2Y0A21_Sensor 	dst_sensor[3];
+Romi_Motor_Power	motor[2];
+QTRSensors 			qtr;
 
 void customSetupRSLK()
 { // removed encoder since using custom one
@@ -107,12 +10,14 @@ void customSetupRSLK()
 	dst_sensor[1].begin(SHRP_DIST_C_PIN, INPUT_PULLDOWN);
 	dst_sensor[2].begin(SHRP_DIST_R_PIN, INPUT_PULLDOWN);
 
+	motor[0].begin(MOTOR_L_SLP_PIN,MOTOR_L_DIR_PIN,MOTOR_L_PWM_PIN);
+	motor[1].begin(MOTOR_R_SLP_PIN,MOTOR_R_DIR_PIN,MOTOR_R_PWM_PIN);
+
+	setupEncoder(ENCODER_ELA_PIN, ENCODER_ELB_PIN, ENCODER_ERA_PIN, ENCODER_ERB_PIN);
+
 	qtr.setTypeRC();
 	qtr.setSensorPins((const uint8_t[]){QTR_7, QTR_6, QTR_5, QTR_4, QTR_3, QTR_2, QTR_1, QTR_0}, LS_NUM_SENSORS);
 	qtr.setEmitterPins(QTR_EMITTER_PIN_ODD, QTR_EMITTER_PIN_EVEN);
-
-	encoder[0].begin(ENCODER_ELA_PIN, ENCODER_ELB_PIN); // left wheel encoder on the rslk kit
-    encoder[1].begin(ENCODER_ERA_PIN, ENCODER_ERB_PIN); // right wheel encoder on the rslk kit
 }
 
 uint16_t readSharpDist(uint8_t num)
@@ -130,8 +35,8 @@ void readLineSensor(uint16_t *sensorValues)
 
 void readCalLineSensor(uint16_t *sensorValues,
 					   uint16_t *calVal,
-					   uint16_t *sensorMinVal,
-					   uint16_t *sensorMaxVal,
+					   const uint16_t *sensorMinVal,
+					   const uint16_t *sensorMaxVal,
 					   uint8_t mode)
 {
 	for (int x = 0; x < LS_NUM_SENSORS; x++)
@@ -174,28 +79,144 @@ uint32_t getLinePosition(uint16_t *calVal, uint8_t mode)
   return _lastPosition;
 }
 
-void clearMinMax(uint16_t *sensorMin, uint16_t *sensorMax)
-{
-	for (int x = 0; x < LS_NUM_SENSORS; x++)
+void enableMotor(uint8_t motorNum) {
+	if(motorNum == 0 || motorNum == 2)
 	{
-		sensorMin[x] = 1100;
-		sensorMax[x] = 900;
+		motor[0].enableMotor();
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		motor[1].enableMotor();
 	}
 }
 
-void setSensorMinMax(uint16_t *sensor, uint16_t *sensorMin, uint16_t *sensorMax)
-{
-	for (int x = 0; x < LS_NUM_SENSORS; x++)
+
+void disableMotor(uint8_t motorNum) {
+	if(motorNum == 0 || motorNum == 2)
 	{
-		if (sensor[x] < sensorMin[x])
-		{
-			sensorMin[x] = sensor[x];
-		}
-		if (sensor[x] > sensorMax[x])
-		{
-			sensorMax[x] = sensor[x];
+		motor[0].disableMotor();
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		motor[1].disableMotor();
+	}
+}
+
+void pauseMotor(uint8_t motorNum) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		motor[0].pauseMotor();
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		motor[1].pauseMotor();
+	}
+}
+
+void resumeMotor(uint8_t motorNum) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		motor[0].resumeMotor();
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		motor[1].resumeMotor();
+	}
+}
+
+void setMotorDirection(uint8_t motorNum,uint8_t direction) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		if(direction == 0) {
+			motor[0].directionForward();
+		} else if(direction == 1) {
+			motor[0].directionBackward();
 		}
 	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		if(direction == 0) {
+			motor[1].directionForward();
+		} else if(direction == 1) {
+			motor[1].directionBackward();
+		}
+	}
+}
+
+void setMotorSpeed(uint8_t motorNum, uint8_t speed) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		 motor[0].setSpeed(speed);
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		 motor[1].setSpeed(speed);
+	}
+}
+
+void setRawMotorSpeed(uint8_t motorNum, uint8_t speed) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		motor[0].setRawSpeed(speed);
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		motor[1].setRawSpeed(speed);
+	}
+}
+
+void setMotorSpeed2(uint8_t motorNum, int8_t speed) {
+	if(motorNum == 0 || motorNum == 2)
+	{
+		if(speed >= 0)
+		{
+			motor[0].directionForward();
+		}
+		else
+		{
+			motor[0].directionBackward();
+		}
+		motor[0].setSpeed(speed);
+	}
+
+	if(motorNum == 1 || motorNum == 2)
+	{
+		if(speed >= 0)
+		{
+			motor[1].directionForward();
+		}
+		else
+		{
+			motor[1].directionBackward();
+		}
+		motor[1].setSpeed(speed);
+	}
+}
+
+void computePID(int32_t setpoint, int32_t &prevError, int32_t input, int16_t &output, float dt, float &integral, float kp, float ki, float kd)
+{
+  int32_t error = setpoint - input;
+  integral += (float)error * dt;
+  float deriv = (float)(prevError - error) / dt;
+  output = kp * (float)error + ki * integral + kd * deriv;
+  prevError = error;
+}
+
+uint16_t robotDeg2WheelDeg(uint16_t turnAngle)
+{
+	return ((float)turnAngle*ROBOT_W2W_RADIUS)/(WHEEL_DIAMETER/2.0f);
+}
+
+uint16_t inches2WheelDeg(uint8_t distance)
+{
+	return 180.0f*(float)distance/(PI*(WHEEL_DIAMETER/2.0f));
 }
 
 void customLog(const String &s, logLevels scriptLevel = DEBUG, logLevels printLevel = INFO, bool ln = false)

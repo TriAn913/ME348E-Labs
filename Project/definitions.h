@@ -1,11 +1,24 @@
-/** @file */
+/** @file definitions.h
+ * Defines level 5 states/functions with some necessary variable definitions and setups.
+*/
 #include <RSLK_Pins.h>
 #include <QTRSensors.h>
 #include <GP2Y0A21_Sensor.h>
-#include "Custom_Encoder.h"
+#include "Romi_Motor_Power.h"
+#include "CustomEncoder.h"
 
 #ifndef definitions_h
 #define definitions_h
+
+/**
+ * @brief   Diameter of the drive wheels (inches).
+ */
+#define WHEEL_DIAMETER 2.7559055
+
+/**
+ * @brief   Radius of the robot, or the wheel-to-wheel distance divided by 2 (inches).
+ */
+#define ROBOT_W2W_RADIUS 4.92
 
 /**
  * @brief   Total number of sensors on QTR line sensor.
@@ -38,6 +51,21 @@
 #define RIGHT_MOTOR 1
 
 /**
+ * @brief   Can be used to reference the right motor in the below functions.
+ */
+#define BOTH_MOTORS 2
+
+/**
+ * @brief   Can be used to reference the right motor in the below functions.
+ */
+#define FLY_MOTOR 3
+
+/**
+ * @brief   Can be used to reference the right motor in the below functions.
+ */
+#define FLY_MOTOR 3
+
+/**
  * @brief   Can be used to reference setting the motor function to forward.
  */
 #define MOTOR_DIR_FORWARD 0
@@ -46,6 +74,26 @@
  * @brief   Can be used to reference setting the motor function to backward.
  */
 #define MOTOR_DIR_BACKWARD 1
+
+/**
+ * @brief   Can be used to reference turning the robot left (CCW).
+ */
+#define ROBOT_TURN_LEFT 0
+
+/**
+ * @brief   Can be used to reference turning the robot left (CW).
+ */
+#define ROBOT_TURN_RIGHT 1
+
+/**
+ * @brief   Can be used to reference moving the robot forward.
+ */
+#define ROBOT_FORWARD 2
+
+/**
+ * @brief   Can be used to reference moving the robot backward.
+ */
+#define ROBOT_BACKWARD 3
 
 /**
  * @brief   Used to specify that the robot is running on a floor lighter than the line
@@ -58,7 +106,7 @@
 #define LIGHT_LINE 1
 
 /**
- * @brief Used to specify Serial print logging levels
+ * @brief Used to specify Serial print logging levels. (SPECIAL_1, NONE, INFO, DEBUG)
  */
 enum logLevels
 {
@@ -140,8 +188,8 @@ void readLineSensor(uint16_t *sensor);
 /// Then the value is subtracted from 1000 to provide a consistent scale.
 void readCalLineSensor(uint16_t *sensor,
 					   uint16_t *calVal,
-					   uint16_t *sensorMin,
-					   uint16_t *sensorMax,
+					   const uint16_t *sensorMin,
+					   const uint16_t *sensorMax,
 					   uint8_t mode);
 
 /// \brief Get line position (modified version of getLinePosition() from SimpleRSLK)
@@ -164,28 +212,129 @@ void readCalLineSensor(uint16_t *sensor,
 ///  where the robot is detecting the line. This function can be overridden.
 uint32_t getLinePosition(uint16_t *calVal, uint8_t mode);
 
-/// \brief Provide default values for the sensor's Min and Max arrays.
+/// \brief Enable motor (take it out of sleep)
 ///
-/// \param[out] sensorMin stores sensor's min values. Must pass an array with 8 elements.
-///  All elements will by default be given a large value.
+/// \param[in] motorNum that designates the the motor. Valid values are 0 - 2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
 ///
-/// \param[out] sensorMax stores sensor's max values. Must pass an array with 8 elements.
-///  All elements will by default be given a value of 0.
-///
-///  Initializes arrays to be used to store line sensor's min and max values.
-void clearMinMax(uint16_t *sensorMin, uint16_t *sensorMax);
+/// Takes the motor out of sleep. The motor will not move unless you also call setMotorSpeed.
+void enableMotor(uint8_t motorNum);
 
-/// \brief Update line sensor's min and max values array based on current data.
+/// \brief Disable motor (puts the motor to sleep)
 ///
-/// \param[in] sensor is an array filled with line sensor values previously filled by readLineSensor.
+/// \param[in] motorNum that designates the the motor. Valid values are 0 - 2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
 ///
-/// \param[out] sensorMin stores sensor's min values.
+/// Disabling the motor sets its speed to 0 and puts it to sleep.
+void disableMotor(uint8_t motorNum);
+
+/// \brief Pause motor (put the motor to sleep while saving its speed)
 ///
-/// \param[out] sensorMax stores sensor's max values.
+/// \param[in] motorNum that designates the the motor. Valid values are 0-2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
 ///
-///  Take the current line sensor values and update min and max values. This function along with the
-///  min and max arrays are useful when performing calibration.
-void setSensorMinMax(uint16_t *sensor, uint16_t *sensorMin, uint16_t *sensorMax);
+/// Puts the motor to sleep while also preserving the previously set motor speed.
+void pauseMotor(uint8_t motorNum);
+
+/// \brief Resume motor (take the motor out of sleep and resumes its prior speed)
+///
+/// \param[in] motorNum that designates the the motor. Valid values are 0-2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
+///
+/// Take the motor out of sleep and sets its speed to its prior value.
+void resumeMotor(uint8_t motorNum);
+
+/// \brief Set direction the motor will turn
+///
+/// \param[in] motorNum that designates the the motor. Valid values are 0-2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
+
+/// \param[in] direction that specifies the motor's direction @n
+/// - 0 for forward
+/// - 1 for for backward
+///
+/// Specifies the motor's direction. Can control an indivdual motor or both motors.
+void setMotorDirection(uint8_t motorNum,uint8_t direction);
+
+/// \brief Set the motor speed
+///
+/// \param[in] motorNum that designates the the motor. Valid values are 0-2. @n
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
+///
+/// \param[in] speed that specifies the motor speed. Valid values are 0 - 100.
+/// - 0 for 0% of motor speed.
+/// - ...
+/// - 100 for 100% of motor speed.
+///
+/// Sets the speed of the motor. A value of 0 means no movement. 100 will set the motor to its fastest
+/// speed.
+void setMotorSpeed(uint8_t motorNum, uint8_t speed);
+
+/// \brief Set the motor speed
+///
+/// \param[in] motorNum that designates the the motor. Valid values are 0-2.
+/// - 0 for left motor
+/// - 1 for right motor
+/// - 2 for both motors
+///
+/// \param[in] speed that specifies the motor speed. Valid values are -100 to 100.
+/// - -100 for 100% of motor speed, backwards.
+/// - ...
+/// - 0 for 0% of motor speed.
+/// - ...
+/// - 100 for 100% of motor speed, forwards.
+///
+/// Sets the speed of the motor. A value of 0 means no movement. 100 will set the motor to its fastest
+/// speed. Negative speed is backwards and positive speed is forwards.
+void setMotorSpeed2(uint8_t motorNum, int8_t speed);
+
+/// \brief Converts a given robot turn angle to the degrees needed to turn the wheels to complete that turn
+///
+/// \param[in] turnAngle the input turn angle in degrees of the robot about the z axis (perpendicular to the Earth's surface)
+///
+/// \returns the angle (degrees) needed to turn the drive wheels in order to complete the given robot turn angle (degrees)
+uint16_t robotDeg2WheelDeg(uint16_t turnAngle);
+
+/// \brief Converts a given distance (inches) to the degrees needed to turn the wheels to move the robot that distance
+///
+/// \param[in] distance the input turn angle in degrees of the robot about the z axis (perpendicular to the Earth's surface)
+///
+/// \returns the angle (degrees) needed to turn the drive wheels in order to complete the given robot forward/backward movement
+uint16_t inches2WheelDeg(uint8_t distance);
+
+/// \brief Computes the PID output using the inputs. Tune the \p kp, \p ki, and \p kd constants to change the control loop 
+///
+/// \param[in] setPoint target value
+///
+/// \param[in] prevError difference between the \p input and the \p setPoint from the last run
+///
+/// \param[in] input the current measured value
+///
+/// \param[out] output the value used to manage the loop
+///
+/// \param[in] dt time change between loop runs
+///
+/// \param[in] integral the integral term for PID
+///
+/// \param[in] kp proportional constant. Scales how much the error changes the output
+///
+/// \param[in] ki integral constant. Scales how much being away from the setpoint over time changes the output
+///
+/// \param[in] kd derivative constant. Scales how much the change towards or away from the setpoint changes the output
+///
+void computePID(int32_t setpoint, int32_t &prevError, int32_t input, int16_t &output, float dt, float &integral, float kp, float ki, float kd);
 
 /// \brief Logging using Serial print and println with adaptable log levels.
 ///
