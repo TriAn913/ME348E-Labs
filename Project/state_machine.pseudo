@@ -1,0 +1,219 @@
+loop() do
+    if (launchpad left button is pressed) do
+        toggle the value of toggleOn
+    end
+    if (toggleOn is on) do
+        switch (op_0state) do
+            case navigate:
+                switch (op_1state) do
+                    case none:
+                        set op_1state to find_active_beacon
+                    case find_active_beacon:
+                        readIRSensor()
+                        call robotMotionDeg() with 360 degree left turn
+                        if (center IR sensor value is high) do
+                            set motorSpeed to default
+                            call readLineSensorsAndLinePos()
+                            set robotMotion_substate to none
+                            if (line detected) do
+                                set op_1state to turning_towards_backboard
+                            end else do
+                                set op_1state to turning_to_find_centerline
+                            end
+                        end else if (robotMotion_substate is finished) do
+                            set robotMotion_substate to none
+                            decrement motorSpeed by motorSpeedIncrement                           
+                        end
+                        break
+                    case turning_to_find_centerline:
+                        call robotMotionDeg() with 90 degree right turn
+                        if (robotMotion_substate is finished) do
+                            set op_1state to finding_centerline_right
+                            set robotMotion_substate to none
+                        end
+                        break
+                    case finding_centerline_right:
+                        call robotMotionDeg() with 16 inches forward
+                        call readBumpSensor()
+                        if (one or more of the left bump sensors are high) do
+                            set op_1state to avoid_obstacle
+                            set obstacle to avoid_left
+                            set robotMotion_substate to none
+                            break
+                        end else if (one or more of the left bump sensors are high) do
+                            set op_1state to avoid_obstacle
+                            set obstacle to avoid_right
+                            set robotMotion_substate to none
+                            break
+                        end
+                        call readLineSensorsAndLinePos()
+                        if (line detected) do
+                            set op_1state to turning_towards_backboard
+                            set robotMotion_substate to none
+                        end else if (robotMotion_substate == finished) do
+                            set op_1state to finding_centerline_left
+                            set robotMotion_substate to none
+                        end
+                        break
+                    case finding_centerline_left:
+                        call robotMotionDeg() with 32 inches backward
+                        call readLineSensorsAndLinePos()
+                        if (line detected) do
+                            set op_1state to turning_towards_backboard
+                            set robotMotion_substate to none
+                        end else if (robotMotion_substate == finished) do
+                            set op_0state to stop
+                            set robotMotion_substate to none
+                        end
+                        break
+                    case turning_towards_backboard:
+                        call robotMotionDeg() with 90 degree left turn
+                        if (robotMotion_substate is finished) do
+                            set op_1state to moving_to_shoot_position
+                            set robotMotion_substate to none
+                        end
+                        break
+                    case moving_to_shoot_position:
+                        switch (op_2state) do
+                            case none:
+                                set op_2state to MSP_follow_line
+                            case MSP_follow_line:
+                                call checkInters()
+                                if (interCounts >= 1) do
+                                    set op_2state to MSP_follow_line_for_distance
+                                    call setDefaultsEncoderCnts()
+                                end
+                                call readLineSensorsAndLinePos()
+                                call followLine()
+                                break
+                            case MSP_follow_line_for_distance:
+                                call readLineSensorsAndLinePos()
+                                if(getEncoderLeftCnt() >= distanceToShootPosition) do
+                                    set op_0state to aim_and_shoot
+                                    set op_1state to none
+                                    set op_2state to none
+                                end
+                                call followLine()
+                                break
+                        end
+                        break
+                    case avoid_obstacle:
+                        break
+                end
+                break
+            case aim_and_shoot:
+                switch op_1state do
+                    case none:
+                        set op_1state to waiting_for_flywheel_speed
+                        call setMotorSpeed() with the fly motor at fly_center_speed
+                    case waiting_for_flywheel_speed:
+                        call nonblockingTimer() with a wait time of warmup_c_time
+                        if (timer_substate is finished) do
+                            set op_1state to checking_ir_sensors
+                            set timer_substate to none
+                        end
+                        break
+                    case checking_ir_sensors:
+                        readIRSensor()
+                        if (left ir sensor value is high) do
+                            set op_1state to turning_to_active_basket
+                            set basket to left_bskt
+                            call setMotorSpeed() with the fly motor at fly_lr_speed
+                        end else if (right ir sensor value is high) do
+                            set op_1state to turning_to_active_basket
+                            set basket to right_bskt
+                            call setMotorSpeed() with the fly motor at fly_lr_speed
+                        end else if (center ir sensor value is high) do
+                            set op_1state to shooting
+                            set basket to center_bskt
+                        end
+                        break
+                    case turning_to_active_basket:
+                        if (basket is left_bskt) do
+                            call robotMotionDeg() with degrees needed to turn towards left basket
+                        end else if (basket is right_bskt) do
+                            call robotMotionDeg() with degrees needed to turn towards right basket
+                        end else do
+                            set op_1state to checking_ir_sensors
+                        end
+                        if (robotMotion_substate is finished) do
+                            call readIRSensor()
+                            if (center ir sensor value is high) do
+                                set op_1state to shooting
+                                set op_2state to none
+                                set robotMotion_substate to none
+                            end else do
+                                set op_1state to returning_to_center_basket
+                                set robotMotion_substate to none
+                            end
+                        end
+                        break
+                    case shooting:
+                        switch (op_2state) do
+                            case none:
+                                if(basket is center_bskt) do
+                                    set op_2state to turn_push_rod_motor_360
+                                end else do
+                                    set op_2state to waiting_for_flywheel_speed
+                                end
+                                break
+                            case waiting_for_flywheel_speed:
+                                call nonblockingTimer() with a wait time of warmup_lr_time
+                                if (timer_substate is finished) do
+                                    set op_2state to turn_push_rod_motor_360
+                                    set timer_substate to none
+                                end
+                                break
+                            case turn_push_rod_motor_360:
+                                call rotateMotor() with 360 degrees
+                                if (rotateMotor_substate is finished) do
+                                    set op_2state to waiting_for_follow_through
+                                    set rotateMotor_substate to none
+                                end
+                                break
+                            case waiting_for_follow_through:
+                                call nonblockingTimer() with a wait time of shoot_time
+                                if (timer_substate is finished) do
+                                    increment ballsShot
+                                    if (ballsShot > 9) do
+                                        set op_0state to stop
+                                        set op_1state to none
+                                        set op_2state to none
+                                    end
+                                    if (basket is center_bskt) do
+                                        set op_1state to checking_ir_sensors
+                                        set op_2state to none
+                                    end else do
+                                        set op_1state to returning_to_center_basket
+                                        set op_2state to none
+                                    end
+                                end
+                        end
+                        break
+                    case returning_to_center_basket:
+                        if (basket is left_bskt) do
+                            call robotMotionDeg() with degrees needed to turn from the left basket to the center
+                        end else if (basket is right_bskt) do
+                            call robotMotionDeg() with degrees needed to turn from the right basket to the center
+                        end else do
+                            set op_1state to checking_ir_sensors
+                        end
+                        if (robotMotion_substate is finished) do
+                            set op_1state to checking_ir_sensors
+                            set robotMotion_substate to none
+                        end
+                        break
+                end
+                break
+            case stop:
+                disableMotor() with all motors
+                break
+            case default:
+                disableMotor() with all motors
+                break
+        end
+    end else do
+        disableMotor(all motors)
+        setDefaults()
+    end
+end

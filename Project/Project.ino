@@ -44,6 +44,12 @@ uint32_t rightCount; // right motor encoder count
 // IR sensor
 bool irSensorVal[3];
 
+// timer
+unsigned long previousTime;
+
+// number of balls shot
+uint8_t ballsShot;
+
 // states
 enum lvl0states // level 0 operational state
 {
@@ -70,6 +76,7 @@ enum lvl1states // level 1 operational state
 };
 enum lvl2states // level 2 operational state
 {
+    NONE,
     FAB_TURNING,
     FAB_DECREASE_SPEED,
     AO_MOVE_AWAY_FROM_WALL,
@@ -78,9 +85,9 @@ enum lvl2states // level 2 operational state
     AO_FINDING_CENTERLINE,
     MSP_FOLLOWLINE
 };
-lvl0states op_0state;   // the current operational lvl0 state
-lvl1states op_1state;   // the current operational lvl1 state
-lvl2states op_2state;   // the current operational lvl2 state
+lvl0states op_0state; // the current operational lvl0 state
+lvl1states op_1state; // the current operational lvl1 state
+lvl2states op_2state; // the current operational lvl2 state
 
 // lvl3 substates. The function controls the transition out of entry, (optionally) do, and exit. The function-calling state controls the transition out of main and finished.
 enum lvl3states // operational state corresponding to entry, do, exit of the level 3 substate
@@ -91,10 +98,10 @@ enum lvl3states // operational state corresponding to entry, do, exit of the lev
     EXIT,
     FINISHED
 };
-uint8_t substate;            // active operational lvl3 substate
+uint8_t lvl1_substate;       // active operational lvl1 substate
 uint8_t lf_substate;         // active linefollower lvl3 substate
 uint8_t rMotionDeg_substate; // active robot commanded motion lvl3 substate
-
+uint8_t timer_substate;      // active nonblocking timer lvl3 substate
 // turn function parameters
 /*
 #define NINETY_DEG_TURN 170
@@ -110,8 +117,17 @@ void setDefaults()
     // states and substates
     op_0state = lvl0states::NAVIGATE;
     op_1state = lvl1states::NONE;
-    substate = lvl3states::NONE;
+    op_2state = lvl2states::NONE;
+    lvl1_substate = lvl3states::NONE;
     lf_substate = lvl3states::NONE;
+    rMotionDeg_substate = lvl3states::NONE;
+    timer_substate = lvl3states::NONE;
+
+    // timer
+    previousTime = 0;
+
+    //balls shot
+    ballsShot = 0;
 }
 
 void setDefaultsIntersection()
@@ -185,7 +201,7 @@ void allToggle()
 ///
 void followLine()
 {
-    if (lf_substate == lvl3states::ENTRY)
+    if (lf_substate == lvl3states::ENTRY || lf_substate == lvl3states::NONE)
     {
         enableMotor(BOTH_MOTORS);
         lf_substate = lvl3states::DO;
@@ -216,16 +232,15 @@ void readLineSensorsAndLinePos()
 /// \brief lvl3: Use to control robot motion (point turns and straight translation).
 ///
 /// Turns the drive motors a given rotation (degrees of wheel turn) and sets the drive motor direction based on the desired robot movement
-/// (forward, backward, turn right, turn left). Uses \c
+/// (forward, backward, turn right, turn left). Uses \c rMotionDeg_substate , \c motorSpeed . 
 ///
-/// \param wheelDeg the commanded angle the wheel needs to turn (degrees). Use robotDeg2WheelDeg() to determine the wheel rotation based on the desired robot turn angle.
+/// \param[in] wheelDeg the commanded angle the wheel needs to turn (degrees). Use robotDeg2WheelDeg() to determine the wheel rotation based on the desired robot turn angle.
 /// Use inches2WheelDeg() to determine the wheel rotation based on the desired distance in inches.
 ///
-/// \param robotDirection the direction in which to turn (TURN_LEFT (0) or TURN_RIGHT (1)) or move (ROBOT_FORWARD (2) or ROBOT_BACKWARD (3))
+/// \param[in] robotDirection the direction in which to turn (TURN_LEFT (0) or TURN_RIGHT (1)) or move (ROBOT_FORWARD (2) or ROBOT_BACKWARD (3))
 void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
 {
-    // init
-    if (rMotionDeg_substate == lvl3states::ENTRY)
+    if (rMotionDeg_substate == lvl3states::ENTRY || rMotionDeg_substate == lvl3states::NONE)
     {
         setDefaultsEncoderCnts();
 
@@ -264,13 +279,38 @@ void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
     {
         if (rMotionDeg_substate >= wheelDeg)
         {
-            rMotionDeg_substate = 3;
+            rMotionDeg_substate = lvl3states::EXIT;
             setMotorSpeed(BOTH_MOTORS, 0);
         }
     }
     // exit
-    else if (rMotionDeg_substate == lvl3states::EXIT)
+    if (rMotionDeg_substate == lvl3states::EXIT)
     {
         rMotionDeg_substate = lvl3states::FINISHED;
+    }
+}
+
+/// \brief lvl3: Use as a nonblocking delay.
+///
+/// Uses \c previousTime , and \c timer_substate .
+///
+/// \param[in] waitTime the amount of time to be elapsed in milliseconds.
+void nonblockingTimer(unsigned long waitTime)
+{
+    if (timer_substate == lvl3states::ENTRY || timer_substate == lvl3states::NONE)
+    {
+        previousTime = millis();
+    }
+    else if (timer_substate == lvl3states::DO)
+    {
+        unsigned long currentTime = millis();
+        if (currentTime - previousTime > waitTime)
+        {
+            timer_substate == lvl3states::EXIT;
+        }
+    }
+    if (timer_substate == lvl3states::EXIT)
+    {
+        timer_substate == lvl3states::FINISHED;
     }
 }
