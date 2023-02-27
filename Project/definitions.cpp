@@ -5,13 +5,17 @@ Romi_Motor_Power	motor[2];
 QTRSensors 			qtr;
 
 void customSetupRSLK()
-{ // removed encoder since using custom one
+{
 	dst_sensor[0].begin(SHRP_DIST_L_PIN, INPUT_PULLDOWN);
 	dst_sensor[1].begin(SHRP_DIST_C_PIN, INPUT_PULLDOWN);
 	dst_sensor[2].begin(SHRP_DIST_R_PIN, INPUT_PULLDOWN);
 
 	motor[0].begin(MOTOR_L_SLP_PIN,MOTOR_L_DIR_PIN,MOTOR_L_PWM_PIN);
 	motor[1].begin(MOTOR_R_SLP_PIN,MOTOR_R_DIR_PIN,MOTOR_R_PWM_PIN);
+
+	pinMode(IR_L_PIN, INPUT_PULLUP);
+	pinMode(IR_C_PIN, INPUT_PULLUP);
+	pinMode(IR_R_PIN, INPUT_PULLUP);
 
 	setupEncoder(ENCODER_ELA_PIN, ENCODER_ELB_PIN, ENCODER_ERA_PIN, ENCODER_ERB_PIN);
 
@@ -26,6 +30,13 @@ uint16_t readSharpDist(uint8_t num)
 		return 0;
 
 	return dst_sensor[num].read();
+}
+
+void readIRSensor(bool *sensorValues)
+{
+	sensorValues[0] = digitalRead(IR_L_PIN);
+	sensorValues[1] = digitalRead(IR_C_PIN);
+	sensorValues[2] = digitalRead(IR_R_PIN);
 }
 
 void readLineSensor(uint16_t *sensorValues)

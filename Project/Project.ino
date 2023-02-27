@@ -41,33 +41,53 @@ bool lpButtonLastValue = 1; // the value of the launchpad left button value the 
 uint32_t leftCount;  // left motor encoder count
 uint32_t rightCount; // right motor encoder count
 
+// IR sensor
+bool irSensorVal[3];
+
 // states
-enum lvl0states // operational state
+enum lvl0states // level 0 operational state
 {
     NONE,
     NAVIGATE,
-    FIRST_AIM,
     AIM_AND_SHOOT,
     STOP,
 
 };
-enum lvl1states // operational state
+enum lvl1states // level 1 operational state
 {
     NONE,
-    N_,
-    FA_,
-    ASH_,
+    N_FINDING_ACTIVE_BEACON,
+    N_TURNING_TO_FIND_CENTERLINE,
+    N_FINDING_CENTERLINE_R,
+    N_FINDING_CENTERLINE_L,
+    N_TURNING_TOWARDS_BACKBOARD,
+    N_MOVING_TO_SHOOT_POSITION,
+    ASH_CHECKING_IR_SENSORS,
+    ASH_TURNING_TO_ACTIVE_BASKET,
+    ASH_SHOOTING,
+    ASH_RETURNING_TO_CENTER_BASKET,
     ST_
 };
-lvl0states op_state;     // the current operational lvl0 state
-lvl1states op_1state[1]; // [0]: the current operational lvl1 substate; [1]: the previous operational lvl1 substate;
+enum lvl2states // level 2 operational state
+{
+    FAB_TURNING,
+    FAB_DECREASE_SPEED,
+    AO_MOVE_AWAY_FROM_WALL,
+    AO_ADJUST_1,
+    AO_ADJUST_2,
+    AO_FINDING_CENTERLINE,
+    MSP_FOLLOWLINE
+};
+lvl0states op_0state;   // the current operational lvl0 state
+lvl1states op_1state;   // the current operational lvl1 state
+lvl2states op_2state;   // the current operational lvl2 state
 
-// lvl3 substates. The function controls the transition out of entry and exit. The function-calling state controls the transition out of main and finished.
-enum lvl3states // operational state
+// lvl3 substates. The function controls the transition out of entry, (optionally) do, and exit. The function-calling state controls the transition out of main and finished.
+enum lvl3states // operational state corresponding to entry, do, exit of the level 3 substate
 {
     NONE,
     ENTRY,
-    MAIN,
+    DO,
     EXIT,
     FINISHED
 };
@@ -88,9 +108,8 @@ void setDefaults()
     setDefaultsEncoderCnts();
 
     // states and substates
-    op_state = lvl0states::NAVIGATE;
-    op_1state[0] = lvl1states::NONE;
-    op_1state[1] = lvl1states::NONE;
+    op_0state = lvl0states::NAVIGATE;
+    op_1state = lvl1states::NONE;
     substate = lvl3states::NONE;
     lf_substate = lvl3states::NONE;
 }
@@ -166,28 +185,28 @@ void allToggle()
 ///
 void followLine()
 {
-    if (lf_substate == 1)
+    if (lf_substate == lvl3states::ENTRY)
     {
         enableMotor(BOTH_MOTORS);
-        lf_substate = 2;
+        lf_substate = lvl3states::DO;
     }
-    else if (lf_substate == 2)
+    else if (lf_substate == lvl3states::DO)
     {
         computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, LF_DT, lf_integral, lf_kp, lf_ki, lf_kd);
 
         setMotorSpeed2(LEFT_MOTOR, motorSpeed - lf_output);
         setMotorSpeed2(RIGHT_MOTOR, motorSpeed + lf_output);
     }
-    else if (lf_substate == 3)
+    else if (lf_substate == lvl3states::EXIT)
     {
         setDefaultsLFPID();
-        lf_substate = 4;
+        lf_substate = lvl3states::FINISHED;
     }
 }
 
 /// \brief lvl4: Performs the necessary functions to get the line position. Uses \c sensorVal , \c sensorCalVal
 /// , \c sensorMinVal , \c sensorMaxVal , and \c linePos .
-void readLineSensors()
+void readLineSensorsAndLinePos()
 {
     readLineSensor(sensorVal);
     readCalLineSensor(sensorVal, sensorCalVal, sensorMinVal, sensorMaxVal, lineColor);
@@ -206,7 +225,7 @@ void readLineSensors()
 void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
 {
     // init
-    if (substate == 0)
+    if (rMotionDeg_substate == lvl3states::ENTRY)
     {
         setDefaultsEncoderCnts();
 
@@ -238,19 +257,20 @@ void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
         }
         }
         setMotorSpeed(BOTH_MOTORS, motorSpeed);
-        substate = 1;
+        rMotionDeg_substate = lvl3states::DO;
     }
-    // main
-    else if (substate == 1)
+    // do
+    else if (rMotionDeg_substate == lvl3states::DO)
     {
-        if (leftCount >= wheelDeg)
+        if (rMotionDeg_substate >= wheelDeg)
         {
-            substate = 2;
+            rMotionDeg_substate = 3;
             setMotorSpeed(BOTH_MOTORS, 0);
         }
     }
     // exit
-    else if (substate == 2)
+    else if (rMotionDeg_substate == lvl3states::EXIT)
     {
+        rMotionDeg_substate = lvl3states::FINISHED;
     }
 }

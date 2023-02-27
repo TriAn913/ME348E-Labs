@@ -21,6 +21,21 @@
 #define ROBOT_W2W_RADIUS 4.92
 
 /**
+ * @brief	Pin number for the left IR sensor.
+*/
+#define IR_L_PIN 38
+
+/**
+ * @brief	Pin number for the center IR sensor.
+*/
+#define IR_C_PIN 39
+
+/**
+ * @brief	Pin number for the right IR sensor.
+*/
+#define IR_R_PIN 40
+
+/**
  * @brief   Total number of sensors on QTR line sensor.
  */
 #define LS_NUM_SENSORS 8 // number of sensors used
@@ -130,9 +145,11 @@ enum logLevels
 
 /// \brief Performs a variety of initialization needed for the RSLK.
 ///
-/// This function must be called before calling any other functions listed on this page. Changes from the default setupRSLK() include: removal of the encoder, motor, and button setup
+/// This function must be called before calling any other functions listed on this page. Initializes the
+/// distance sensors, the drive motors, the IR sensors, the drive encoders, and the line followers.
 ///
 void customSetupRSLK();
+
 /// \brief Read distance sensor value.
 ///
 /// \param[in] num of the distance sensor to read. Valid values are 0 - 2. Representing the 3 RSLK's sensors that can be
@@ -147,27 +164,35 @@ void customSetupRSLK();
 ///
 uint16_t readSharpDist(uint8_t num);
 
+/// \brief Read IR sensor values.
+///
+/// \param[out] sensorValues array that will be filled with the IR sensor values. Must pass an array with 3 elements.
+/// Array index 0 represents the left most sensor. Array index 2 represents the right most sensor. 
+/// Each index will contain a value from 0 to 1 where 0 is no IR detected and 1 is IR detected
+///
+void readIRSensor(bool *sensorValues);
+
 /// \brief Read line sensor values
 ///
-/// \param[out] sensor array that stores values read from line sensor. Must pass an array with 8 elements.
+/// \param[out] sensorValues array that stores values read from line sensor. Must pass an array with 8 elements.
 /// Array index 0 represents the left most sensor. Array index 7 represents the right most sensor. @n
 /// Each index will contain a value from 0 - 2500.
-/// - 0 max reflection (light line)
+/// - 0 max reflection (light line).
 /// - ....
-/// - 2500 no reflection (dark line)
+/// - 2500 no reflection (dark line).
 ///
 ///
 /// Read and store sensor values in the passed in array.
-void readLineSensor(uint16_t *sensor);
+void readLineSensor(uint16_t *sensorValues);
 
 /// \brief Update sensor's min and max values array based on current data.
 ///
-/// \param[out] sensor is an array to be filled with line sensor values.
+/// \param[in] sensorValues is an array that contains the raw line sensor values.
 ///
 /// \param[out] calVal is an array that will be filled with the calibrated values based on the sensor,
 /// sensorMin and sensorMax array. @n
-/// Elements will be filled with values of 0 - 1000
-/// - 0 means no line detected
+/// Elements will be filled with values of 0 - 1000.
+/// - 0 means no line detected.
 /// - ...
 /// - 1000 means line is detected right under sensor.
 ///
@@ -186,7 +211,7 @@ void readLineSensor(uint16_t *sensor);
 /// - When the line is dark then calibration subtracts sensorMax values from the sensor value read.
 /// - When the line is light then calibration subtracts sensorMin values from the sensor value read.
 /// Then the value is subtracted from 1000 to provide a consistent scale.
-void readCalLineSensor(uint16_t *sensor,
+void readCalLineSensor(uint16_t *sensorValues,
 					   uint16_t *calVal,
 					   const uint16_t *sensorMin,
 					   const uint16_t *sensorMax,
