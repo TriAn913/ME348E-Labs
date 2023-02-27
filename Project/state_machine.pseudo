@@ -1,6 +1,9 @@
 loop() do
-    if (launchpad left button is pressed) do
+    if (launchpad left button is pressed and was not previously pressed) do
+        set the value of the previous lpbuttonvalue to pressed
         toggle the value of toggleOn
+    end else if (launchpad left button is not pressed and was previously pressed) do
+        set the value of the previous lpbuttonvalue to not pressed
     end
     if (toggleOn is on) do
         switch (op_0state) do
@@ -217,3 +220,4 @@ loop() do
         setDefaults()
     end
 end
+
