@@ -25,12 +25,12 @@ bool onInter;            // is on intersection (true: on intersection; false: no
 int32_t lf_error;
 int32_t lf_prevError;
 #define LF_MIDDLE 3500
-#define LF_DT 0.1f
+unsigned long lf_prevTime;
 float lf_integral;
 int16_t lf_output;
-static const float lf_kp = 1.0f / 3.5f / 100.0f;  // error of 3500 (max) returns 10
-static const float lf_ki = 0;                     // not needed for this application (would be useful if needed constant power at the setpoint)
-static const float lf_kd = -0.2f / 3.5f / 100.0f; // derivative constant. used to prevent oscillations
+static const float lf_kp = 1.0f / 3.5f / 100.0f;    // error of 3500 (max) returns 10
+static const float lf_ki = 0.00005f;                 // 
+static const float lf_kd = 0.2f / 3.5f / 100.0f;    // derivative constant. used to prevent oscillations
 
 // launchpad left button (toggle on/off)
 bool onToggle = 0;          // toggle all functions on/off (off disables all motors)
@@ -208,10 +208,15 @@ void followLine()
     {
         enableMotor(BOTH_MOTORS);
         lf_substate = lvl3states::DO;
+        lf_prevTime = millis();
     }
     else if (lf_substate == lvl3states::DO)
     {
-        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, LF_DT, lf_integral, lf_kp, lf_ki, lf_kd);
+        unsigned long currentTime = millis();
+
+        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, currentTime-lf_prevTime, lf_integral, lf_kp, lf_ki, lf_kd);
+        
+        lf_prevTime = currentTime;
 
         setMotorSpeed2(LEFT_MOTOR, motorSpeed - lf_output);
         setMotorSpeed2(RIGHT_MOTOR, motorSpeed + lf_output);

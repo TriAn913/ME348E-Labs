@@ -215,7 +215,7 @@ void computePID(int32_t setpoint, int32_t &prevError, int32_t input, int16_t &ou
 {
   int32_t error = setpoint - input;
   integral += (float)error * dt;
-  float deriv = (float)(prevError - error) / dt;
+  float deriv = (float)(error - prevError) / dt;
   output = kp * (float)error + ki * integral + kd * deriv;
   prevError = error;
 }
