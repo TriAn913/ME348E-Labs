@@ -83,7 +83,10 @@ enum lvl2states // level 2 operational state
     AO_ADJUST_1,
     AO_ADJUST_2,
     AO_FINDING_CENTERLINE,
-    MSP_FOLLOWLINE
+    MSP_FOLLOWLINE,
+    S_TURN_PUSH_ROD_MOTOR,
+    S_WAITING_FOR_FLY_SPEED,
+    S_WAITING_FOR_FOLLOW_THROUGH
 };
 lvl0states op_0state; // the current operational lvl0 state
 lvl1states op_1state; // the current operational lvl1 state

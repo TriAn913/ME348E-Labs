@@ -1,9 +1,9 @@
 loop() do
     if (launchpad left button is pressed and was not previously pressed) do
-        set the value of the previous lpbuttonvalue to pressed
+        set the value of the previous launchpad left button value to pressed
         toggle the value of toggleOn
     end else if (launchpad left button is not pressed and was previously pressed) do
-        set the value of the previous lpbuttonvalue to not pressed
+        set the value of the previous launchpad left button value to not pressed
     end
     if (toggleOn is on) do
         switch (op_0state) do
@@ -91,7 +91,8 @@ loop() do
                                 break
                             case MSP_follow_line_for_distance:
                                 call readLineSensorsAndLinePos()
-                                if(getEncoderLeftCnt() >= distanceToShootPosition) do
+                                set leftCount to getEncoderLeftCnt()
+                                if(leftCount >= distanceToShootPosition) do
                                     set op_0state to aim_and_shoot
                                     set op_1state to none
                                     set op_2state to none
@@ -101,6 +102,48 @@ loop() do
                         end
                         break
                     case avoid_obstacle:
+                        switch (op_2state) do
+                            case none:
+                                set op_2state to AO_move_away_from_wall
+                                set tempLeftCount to leftCount
+                            case AO_move_away_from_wall:
+                                call robotMotionDeg() with 1 inch backwards
+                                if(robotMotion_substate is finished) do
+                                    set op_2state to AO_adjust_1
+                                    set robotMotion_substate to none
+                                end
+                                break
+                            case AO_adjust_1:
+                                if(obstacle is avoid_left) do
+                                    call robotMotionDeg() with 30 degree right turn
+                                end else do
+                                    call robotMotionDeg() with 30 degree left turn
+                                end
+                                if(robotMotion_substate is finished) do
+                                    set op_2state to AO_finding_centerline
+                                    set robotMotion_substate to none
+                                end
+                                break
+                            case AO_adjust_2:
+                                if(obstacle is avoid_left) do
+                                    call robotMotionDeg() with 15 degree left turn
+                                end else do
+                                    call robotMotionDeg() with 15 degree right turn
+                                end
+                                if(robotMotion_substate is finished) do
+                                    set op_1state to finding_centerline_left
+                                    set op_2state to none
+                                    set robotMotion_substate to none
+                                end
+                                break
+                            case AO_finding_centerline:
+                                call robotMotionDeg() with 17 inches minus tempLeftCount forward
+                                if(robotMotion_substate is finished) do
+                                    set op_2state to AO_adjust_2
+                                    set robotMotion_substate to none
+                                end
+                                break
+                        end
                         break
                 end
                 break
@@ -160,21 +203,21 @@ loop() do
                                     set op_2state to waiting_for_flywheel_speed
                                 end
                                 break
-                            case waiting_for_flywheel_speed:
+                            case S_waiting_for_flywheel_speed:
                                 call nonblockingTimer() with a wait time of warmup_lr_time
                                 if (timer_substate is finished) do
                                     set op_2state to turn_push_rod_motor_360
                                     set timer_substate to none
                                 end
                                 break
-                            case turn_push_rod_motor_360:
+                            case S_turn_push_rod_motor_360:
                                 call rotateMotor() with 360 degrees
                                 if (rotateMotor_substate is finished) do
                                     set op_2state to waiting_for_follow_through
                                     set rotateMotor_substate to none
                                 end
                                 break
-                            case waiting_for_follow_through:
+                            case S_waiting_for_follow_through:
                                 call nonblockingTimer() with a wait time of shoot_time
                                 if (timer_substate is finished) do
                                     increment ballsShot
@@ -191,6 +234,7 @@ loop() do
                                         set op_2state to none
                                     end
                                 end
+                                break
                         end
                         break
                     case returning_to_center_basket:
@@ -220,4 +264,3 @@ loop() do
         setDefaults()
     end
 end
-
