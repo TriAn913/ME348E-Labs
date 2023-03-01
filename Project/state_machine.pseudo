@@ -161,17 +161,21 @@ loop() do
                         break
                     case checking_ir_sensors:
                         readIRSensor()
-                        if (left ir sensor value is high) do
+                        nonblockingTimer() with reshoot_time
+                        if (left ir sensor value is high and (basket is not left_bskt or timer_substate is finished)) do
                             set op_1state to turning_to_active_basket
                             set basket to left_bskt
                             call setMotorSpeed() with the fly motor at fly_lr_speed
-                        end else if (right ir sensor value is high) do
+                            set timer_substate to none
+                        end else if (right ir sensor value is high and (basket is not right_bskt or timer_substate is finished)) do
                             set op_1state to turning_to_active_basket
                             set basket to right_bskt
                             call setMotorSpeed() with the fly motor at fly_lr_speed
-                        end else if (center ir sensor value is high) do
+                            set timer_substate to none
+                        end else if (center ir sensor value is high and (basket is not left_bskt or timer_substate is finished)) do
                             set op_1state to shooting
                             set basket to center_bskt
+                            set timer_substate to none
                         end
                         break
                     case turning_to_active_basket:
