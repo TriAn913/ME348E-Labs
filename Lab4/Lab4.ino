@@ -3,7 +3,7 @@
 #define IN3 4
 #define IN4 5
 int Steps = 0;
-boolean Direction = false;
+boolean Direction;
 float commandedSteps;
 
 bool toggle = true;
@@ -58,17 +58,25 @@ void loop()
         newData = true;
       }
     }
-    
+
+    // clear buffer
+    while (Serial.available() > 0)
+    {
+      Serial.read();
+    }
+
     commandedSteps = atof(serialArray);
     Serial.println(commandedSteps);
     toggle = false;
+
+    Direction = commandedSteps >= 0 ? true : false;
   }
   else
   {
 
     if (commandedSteps != 0)
     {
-      for (int i = 0; i < commandedSteps; i++)
+      for (int i = 0; i < abs(commandedSteps); i++)
       {
         // stepperFULL(1);
         stepperHALF(1);
