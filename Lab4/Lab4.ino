@@ -38,6 +38,7 @@ void loop()
     char endMarker = '\n';
     char rc;
 
+    Serial.print("Read Chars: ");
     while (Serial.available() > 0 && newData == false)
     {
       rc = Serial.read();
@@ -50,6 +51,8 @@ void loop()
         {
           ndx = 32 - 1;
         }
+        Serial.print(serialArray[ndx]);
+        Serial.print(" ");
       }
       else
       {
@@ -66,10 +69,13 @@ void loop()
     }
 
     commandedSteps = atof(serialArray);
-    Serial.println(commandedSteps);
+    Serial.print("\nCommanded Steps: ");
+    Serial.print(commandedSteps);
     toggle = false;
 
     Direction = commandedSteps >= 0 ? true : false;
+    Serial.print("\nDirection:");
+    Serial.println(Direction);
   }
   else
   {
