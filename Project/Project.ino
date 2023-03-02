@@ -11,10 +11,10 @@ logLevels logLevel = INFO;
 uint16_t motorSpeed = 10;
 
 // linefollower
-uint16_t sensorVal[LS_NUM_SENSORS];                                                                    // raw sensor values
-uint16_t sensorCalVal[LS_NUM_SENSORS];                                                                 // calibrated sensor values
-static const uint16_t sensorMaxVal[LS_NUM_SENSORS] = {875, 858, 663, 759, 588, 797, 679, 950};         // max white sensor values
-static const uint16_t sensorMinVal[LS_NUM_SENSORS] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; // min black sensor values
+uint16_t sensorVal[LS_NUM_SENSORS];     // raw sensor values
+uint16_t sensorCalVal[LS_NUM_SENSORS];  // calibrated sensor values
+static const uint16_t sensorMaxVal[LS_NUM_SENSORS] = { 875, 858, 663, 759, 588, 797, 679, 950 };         // max white sensor values
+static const uint16_t sensorMinVal[LS_NUM_SENSORS] = { 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000 }; // min black sensor values
 #define lineColor DARK_LINE
 uint32_t linePos = 9999; // line position
 uint8_t interCounts;     // number of intersections crossed
@@ -29,23 +29,23 @@ unsigned long lf_prevTime;
 float lf_integral;
 int16_t lf_output;
 static const float lf_kp = 1.0f / 3.5f / 100.0f;    // error of 3500 (max) returns 10
-static const float lf_ki = 0.00005f;                 // 
-static const float lf_kd = 0.2f / 3.5f / 100.0f;    // derivative constant. used to prevent oscillations
+static const float lf_ki = 0.00005f / 3.5f / 100.0f;// integral constant
+static const float lf_kd = 0.2f / 3.5f / 100.0f;    // derivative constant
 
 // launchpad left button (toggle on/off)
 bool onToggle = 0;          // toggle all functions on/off (off disables all motors)
 bool lpButtonValue = 0;     // launchpad left button
 bool lpButtonLastValue = 1; // the value of the launchpad left button value the last time checked
 
-// encoder
-uint32_t leftCount;  // left motor encoder count
-uint32_t rightCount; // right motor encoder count
-
 // IR sensor
 bool irSensorVal[3];
 
 // timer
 unsigned long previousTime;
+
+// stepper
+unsigned long previousStepperTime;
+uint32_t stepperStepCnt;
 
 // number of balls shot
 uint8_t ballsShot;
@@ -105,11 +105,7 @@ uint8_t lvl1_substate;       // active operational lvl1 substate
 uint8_t lf_substate;         // active linefollower lvl3 substate
 uint8_t rMotionDeg_substate; // active robot commanded motion lvl3 substate
 uint8_t timer_substate;      // active nonblocking timer lvl3 substate
-// turn function parameters
-/*
-#define NINETY_DEG_TURN 170
-#define ONE_EIGHTY_DEG_TURN 340
-*/
+uint8_t stepper_substate;      // active nonblocking timer lvl3 substate
 
 void setDefaults()
 {
@@ -128,6 +124,10 @@ void setDefaults()
 
     // timer
     previousTime = 0;
+
+    // stepper motor
+    previousStepperTime = 0;
+    stepperStepCnt = 0;
 
     //balls shot
     ballsShot = 0;
@@ -153,8 +153,6 @@ void setDefaultsLFPID()
 void setDefaultsEncoderCnts()
 {
     // encoder counts
-    leftCount = 0;
-    rightCount = 0;
     resetRightEncoderCnt();
     resetLeftEncoderCnt();
 }
@@ -214,8 +212,8 @@ void followLine()
     {
         unsigned long currentTime = millis();
 
-        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, currentTime-lf_prevTime, lf_integral, lf_kp, lf_ki, lf_kd);
-        
+        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, currentTime - lf_prevTime, lf_integral, lf_kp, lf_ki, lf_kd);
+
         lf_prevTime = currentTime;
 
         setMotorSpeed2(LEFT_MOTOR, motorSpeed - lf_output);
@@ -254,38 +252,38 @@ void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
 
         switch (robotDirection)
         {
-        case (ROBOT_FORWARD):
-        {
-            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
-            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
-            break;
-        }
-        case (ROBOT_TURN_RIGHT):
-        {
-            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
-            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
-            break;
-        }
-        case (ROBOT_TURN_LEFT):
-        {
-            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
-            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
-            break;
-        }
-        case (ROBOT_BACKWARD):
-        {
-            setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
-            setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
-            break;
-        }
+            case (ROBOT_FORWARD):
+            {
+                setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
+                setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
+                break;
+            }
+            case (ROBOT_TURN_RIGHT):
+            {
+                setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
+                setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+                break;
+            }
+            case (ROBOT_TURN_LEFT):
+            {
+                setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+                setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
+                break;
+            }
+            case (ROBOT_BACKWARD):
+            {
+                setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+                setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+                break;
+            }
         }
         setMotorSpeed(BOTH_MOTORS, motorSpeed);
         rMotionDeg_substate = lvl3states::DO;
     }
     // do
-    else if (rMotionDeg_substate == lvl3states::DO)
+    if (rMotionDeg_substate == lvl3states::DO)
     {
-        if (rMotionDeg_substate >= wheelDeg)
+        if (abs(getEncoderLeftCnt()) >= wheelDeg)
         {
             rMotionDeg_substate = lvl3states::EXIT;
             setMotorSpeed(BOTH_MOTORS, 0);
@@ -295,6 +293,50 @@ void robotMotionDeg(uint32_t wheelDeg, bool robotDirection = ROBOT_FORWARD)
     if (rMotionDeg_substate == lvl3states::EXIT)
     {
         rMotionDeg_substate = lvl3states::FINISHED;
+    }
+}
+
+/// \brief lvl3: Use to rotate the stepper motor by a specific step amount.
+///
+/// \param[in] steps the commanded steps for the stepper motor to rotate (negative is ccw, positive is cw).
+/// Use (revolutions/STEPPER_STEPS_PER_REV) to convert revolutions to steps.
+///
+void rotateStepperMotor(int32_t steps)
+{
+    if (stepper_substate == lvl3states::ENTRY || timer_substate == lvl3states::NONE)
+    {
+        previousStepperTime = millis();
+        if (steps >= 0)
+        {
+            Stepper_Direction = true;
+        }
+        else
+        {
+            Stepper_Direction = false;
+        }
+        stepperStepCnt = 0;
+        stepper_substate = lvl3states::DO;
+    }
+    if (stepper_substate == lvl3states::DO)
+    {
+        if (stepperStepCnt >= abs(steps))
+        {
+            stepper_substate == lvl3states::EXIT;
+        }
+        else
+        {
+            unsigned long currentTime = millis();
+            if (currentTime - previousStepperTime > STEPPER_DELAY_PER_STEP)
+            {
+                stepperFull();
+            }
+            stepperStepCnt++;
+            previousStepperTime = currentTime;
+        }
+    }
+    if (stepper_substate == lvl3states::EXIT)
+    {
+        stepper_substate == lvl3states::FINISHED;
     }
 }
 
@@ -308,8 +350,9 @@ void nonblockingTimer(unsigned long waitTime)
     if (timer_substate == lvl3states::ENTRY || timer_substate == lvl3states::NONE)
     {
         previousTime = millis();
+        timer_substate = lvl3states::DO;
     }
-    else if (timer_substate == lvl3states::DO)
+    if (timer_substate == lvl3states::DO)
     {
         unsigned long currentTime = millis();
         if (currentTime - previousTime > waitTime)

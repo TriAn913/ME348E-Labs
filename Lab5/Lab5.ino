@@ -22,9 +22,9 @@ int potPWMval = 0;
 int motorPWMval = 0;
 
 // PID constants (Use the Ziegler Nicholas Tuning Method as a first guess)
-double kp = 0;
-double ki = 0;
-double kd = 0;
+double kp = 0.052763;
+double ki = 0.561044;
+double kd = 0.445598;
 
 // PID Variables
 unsigned long currentTime, previousTime;
@@ -59,11 +59,10 @@ void setup()
 
 void loop()
 {
-  // POTENTIOMETER CONTROL
 
   potPWMval = analogRead(potentiometerPWMinput);
-//  Serial.print("PotVal: ");
-//  Serial.print(potPWMval);
+  //  Serial.print("PotVal: ");
+  //  Serial.print(potPWMval);
   switch (0)
   {
     case 1: // directly set motor PWM (motor power) based on potentiometer value
@@ -91,18 +90,18 @@ void loop()
   }
 
 
-//  Serial.print(" enc: ");
-//  Serial.print(encoder0Pos);
-//  Serial.print(" encLst: ");
-//  Serial.print(encoderPosLast);
-  
-  motorSpeed = ((double)(encoder0Pos - encoderPosLast) / (double)countsPerRev)  / ((double)delayTime/1000);
+  //  Serial.print(" enc: ");
+  //  Serial.print(encoder0Pos);
+  //  Serial.print(" encLst: ");
+  //  Serial.print(encoderPosLast);
+
+  motorSpeed = ((double)(encoder0Pos - encoderPosLast) / (double)countsPerRev) / ((double)delayTime / 1000);
 
   // Serial.println(potPWMval);
   // Serial.print(" motorSpeed: ");
   Serial.print(motorSpeed);
-//  Serial.print(" cmdedMotorPWM: ");
-//  Serial.print(motorPWMval);
+  //  Serial.print(" cmdedMotorPWM: ");
+  //  Serial.print(motorPWMval);
 
   if (motorPWMval < 0)
   {

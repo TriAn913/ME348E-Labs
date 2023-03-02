@@ -215,7 +215,7 @@ loop() do
                                 end
                                 break
                             case S_turn_push_rod_motor_360:
-                                call rotateMotor() with 360 degrees
+                                call rotateStepperMotor() with 360 degrees
                                 if (rotateMotor_substate is finished) do
                                     set op_2state to waiting_for_follow_through
                                     set rotateMotor_substate to none

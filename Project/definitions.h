@@ -20,6 +20,21 @@
  */
 #define ROBOT_W2W_RADIUS 4.92
 
+ /**
+  * @brief   Encoder counts for the Drive Motors per revolution.
+  */
+#define Wheel_CNTS_PER_REV 360
+
+ /**
+  * @brief   The number of steps for a full rotation of the stepper motor.
+  */
+#define STEPPER_STEPS_PER_REV 4096
+
+  /**
+   * @brief   The number of milliseconds between each step of the stepper motor.
+   */
+#define STEPPER_DELAY_PER_STEP 1500
+
 /**
  * @brief	Pin number for the left IR sensor.
 */
@@ -34,6 +49,26 @@
  * @brief	Pin number for the right IR sensor.
 */
 #define IR_R_PIN 40
+
+/**
+ * @brief	Pin number for the 1st Stepper Motor Pin.
+*/
+#define STEPPER_1_PIN 2
+
+/**
+ * @brief	Pin number for the 2nd Stepper Motor Pin.
+*/
+#define STEPPER_2_PIN 3
+
+/**
+ * @brief	Pin number for the 3rd Stepper Motor Pin.
+*/
+#define STEPPER_3_PIN 4
+
+/**
+ * @brief	Pin number for the 4th Stepper Motor Pin.
+*/
+#define STEPPER_4_PIN 5
 
 /**
  * @brief   Total number of sensors on QTR line sensor.
@@ -143,6 +178,11 @@ enum logLevels
 	DEBUG
 };
 
+/**
+ * @brief   Determines direction of stepper (0: cw, 1: ccw).
+ */
+boolean Stepper_Direction;
+
 /// \brief Performs a variety of initialization needed for the RSLK.
 ///
 /// This function must be called before calling any other functions listed on this page. Initializes the
@@ -236,6 +276,10 @@ void readCalLineSensor(uint16_t *sensorValues,
 ///  Using calibrated line sensor value this function provides a numerical value indicating
 ///  where the robot is detecting the line. This function can be overridden.
 uint32_t getLinePosition(uint16_t *calVal, uint8_t mode);
+
+/// \brief Steps the motor 1 full step in the direction indicated by Stepper_Direction.
+/// Uses \c Stepper_Direction , \c Stepper_Steps .
+void stepperFull();
 
 /// \brief Enable motor (take it out of sleep)
 ///
