@@ -1,7 +1,7 @@
 // encoder counts per revolution
 #define countsPerRev (uint16_t)48
 // max speed (experimental) in Rev/s
-#define maxSpeed 66.7f
+#define maxSpeed 66.7*2*PI
 // hard-coded delay time
 #define delayTime (uint8_t)20
 
@@ -16,10 +16,10 @@
 #define encoder1PinB (uint8_t)37
 
 // Variable Definitions
-volatile signed int encoder0Pos = 0;
-signed int encoderPosLast = 0;
-uint16_t potPWMval = 0;
-uint8_t motorPWMval = 0;
+volatile int32_t encoder0Pos = 0;
+int32_t encoderPosLast = 0;
+int potPWMval = 0;
+int motorPWMval = 0;
 
 // PID constants (Use the Ziegler Nicholas Tuning Method as a first guess)
 double kp = 0;
@@ -37,7 +37,7 @@ double cumError, rateError;
 void setup()
 {
   // Don't Change
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(potentiometerPWMinput, INPUT_PULLUP);
   pinMode(encoder0PinA, INPUT_PULLUP);
   pinMode(encoder0PinB, INPUT_PULLUP);
@@ -62,7 +62,8 @@ void loop()
   // POTENTIOMETER CONTROL
 
   potPWMval = analogRead(potentiometerPWMinput);
-
+//  Serial.print("PotVal: ");
+//  Serial.print(potPWMval);
   switch (0)
   {
     case 1: // directly set motor PWM (motor power) based on potentiometer value
@@ -84,14 +85,24 @@ void loop()
     }
     default: // set motor pwm to a fixed value
     {
-      motorPWMval = 100; // out of 255
+      motorPWMval = 255; // out of 255
+
     }
   }
 
-  motorSpeed = ((encoder0Pos - encoderPosLast) / countsPerRev) * 2 * PI / delayTime;
+
+//  Serial.print(" enc: ");
+//  Serial.print(encoder0Pos);
+//  Serial.print(" encLst: ");
+//  Serial.print(encoderPosLast);
+  
+  motorSpeed = ((double)(encoder0Pos - encoderPosLast) / (double)countsPerRev)  / ((double)delayTime/1000);
 
   // Serial.println(potPWMval);
-  Serial.println(motorSpeed);
+  // Serial.print(" motorSpeed: ");
+  Serial.print(motorSpeed);
+//  Serial.print(" cmdedMotorPWM: ");
+//  Serial.print(motorPWMval);
 
   if (motorPWMval < 0)
   {
@@ -107,6 +118,7 @@ void loop()
   analogWrite(PWMspeedPin, abs(motorPWMval));
 
   encoderPosLast = encoder0Pos;
+  Serial.println();
   delay(delayTime); // This is a delay to time the control loop. In the future, this should be a non-blocking version.
 }
 
