@@ -1,9 +1,9 @@
 // encoder counts per revolution
 #define countsPerRev (uint16_t)48
 // max speed (experimental) in Rev/s
-#define maxSpeed 66.7*2*PI
+#define maxSpeed 140
 // hard-coded delay time
-#define delayTime (uint8_t)20
+#define delayTime (uint8_t)120
 
 // Pin Definitions
 #define PWMoutp (uint8_t)19
@@ -22,9 +22,12 @@ int potPWMval = 0;
 int motorPWMval = 0;
 
 // PID constants (Use the Ziegler Nicholas Tuning Method as a first guess)
-double kp = 0.052763;
-double ki = 0.561044;
-double kd = 0.445598;
+//double kp = 0.052763;
+//double ki = 0.561044;
+//double kd = 0.445598;
+double kp = 0.45;
+double ki = 0.005;
+double kd = 0.06;
 
 // PID Variables
 unsigned long currentTime, previousTime;
@@ -54,6 +57,7 @@ void setup()
   // Pre-set the direction of the motors
   digitalWrite(PWMoutp, HIGH);
   digitalWrite(PWMoutn, LOW);
+  previousTime = millis();
 
 }
 
@@ -61,49 +65,59 @@ void loop()
 {
 
   potPWMval = analogRead(potentiometerPWMinput);
-  //  Serial.print("PotVal: ");
-  //  Serial.print(potPWMval);
-  switch (0)
+  Serial.print("PotVal: ");
+  Serial.print(potPWMval);
+  switch (2)
   {
     case 1: // directly set motor PWM (motor power) based on potentiometer value
-    {
-      motorPWMval = map(potPWMval, 0, 1023, -255, 255);
-      break;
-    }
+      {
+        motorPWMval = map(potPWMval, 0, 1023, -255, 255);
+        break;
+      }
     case 2: // set desired speed (PID Control) using potentiometer value
-    {
-      setPoint = map(potPWMval, 0, 1023, -maxSpeed, maxSpeed);
-      motorPWMval = map(computePID(motorSpeed), -maxSpeed, maxSpeed, -255, 255);
-      break;
-    }
+      {
+        setPoint = map(potPWMval, 0, 1023, -maxSpeed, maxSpeed);
+        motorPWMval = map(computePID(motorSpeed), -maxSpeed, maxSpeed, -255, 255);
+        if(motorPWMval > 255)
+        {
+          motorPWMval = 255;
+        }
+        if(motorPWMval < -255)
+        {
+          motorPWMval = -255;
+        }
+        break;
+      }
     case 3: // set desired speed (PID Control) using a fixed value
-    {
-      setPoint = 30;
-      motorPWMval = map(computePID(motorSpeed), -maxSpeed, maxSpeed, -255, 255);
-      break;
-    }
+      {
+        setPoint = 30;
+        motorPWMval = map(computePID(motorSpeed), -maxSpeed, maxSpeed, -255, 255);
+        break;
+      }
     default: // set motor pwm to a fixed value
-    {
-      motorPWMval = 255; // out of 255
+      {
+        motorPWMval = 70; // out of 255
 
-    }
+      }
   }
 
 
-  //  Serial.print(" enc: ");
-  //  Serial.print(encoder0Pos);
-  //  Serial.print(" encLst: ");
-  //  Serial.print(encoderPosLast);
+  Serial.print(" enc: ");
+  Serial.print(encoder0Pos);
+  Serial.print(" encLst: ");
+  Serial.print(encoderPosLast);
 
-  motorSpeed = ((double)(encoder0Pos - encoderPosLast) / (double)countsPerRev) / ((double)delayTime / 1000);
+  motorSpeed = ((double)(encoder0Pos - encoderPosLast) / (double)countsPerRev) / ((double)delayTime / (double)1000.0); //rev/s
 
   // Serial.println(potPWMval);
-  // Serial.print(" motorSpeed: ");
+  Serial.print(" motorSpeed: ");
   Serial.print(motorSpeed);
-  //  Serial.print(" cmdedMotorPWM: ");
-  //  Serial.print(motorPWMval);
+  Serial.print(" cmdedMotorSpeed: ");
+  Serial.print(setPoint);
+  Serial.print(" cmdedMotorPWM: ");
+  Serial.print(motorPWMval);
 
-  if (motorPWMval < 0)
+  if (motorPWMval > 0)
   {
     digitalWrite(PWMoutp, HIGH);
     digitalWrite(PWMoutn, LOW);
@@ -130,8 +144,8 @@ void doEncoderA()
   if (digitalRead(encoder0PinA) == HIGH)
   { // found a low-to-high on channel A
     if (digitalRead(encoder0PinB) == LOW)
-    {                                // check channel B to see which way
-                                     // encoder is turning
+    { // check channel B to see which way
+      // encoder is turning
       encoder0Pos = encoder0Pos - 1; // CCW
     }
     else
@@ -142,8 +156,8 @@ void doEncoderA()
   else // found a high-to-low on channel A
   {
     if (digitalRead(encoder0PinB) == LOW)
-    {                                // check channel B to see which way
-                                     // encoder is turning
+    { // check channel B to see which way
+      // encoder is turning
       encoder0Pos = encoder0Pos + 1; // CW
     }
     else
@@ -160,8 +174,8 @@ void doEncoderB()
   if (digitalRead(encoder0PinB) == HIGH)
   { // found a low-to-high on channel A
     if (digitalRead(encoder0PinA) == LOW)
-    {                                // check channel B to see which way
-                                     // encoder is turning
+    { // check channel B to see which way
+      // encoder is turning
       encoder0Pos = encoder0Pos + 1; // CCW
     }
     else
@@ -172,8 +186,8 @@ void doEncoderB()
   else // found a high-to-low on channel A
   {
     if (digitalRead(encoder0PinA) == LOW)
-    {                                // check channel B to see which way
-                                     // encoder is turning
+    { // check channel B to see which way
+      // encoder is turning
       encoder0Pos = encoder0Pos - 1; // CW
     }
     else
@@ -191,7 +205,11 @@ double computePID(double inp)
   elapsedTime = (double)(currentTime - previousTime); // compute time elapsed from previous computation
 
   error = setPoint - inp;                             // determine error
-  cumError += error * elapsedTime;                    // compute integral
+  if(abs(motorPWMval) < 255)
+        {
+          cumError += error * elapsedTime;                    // compute integral
+        }
+  
   rateError = (error - lastSpeedError) / elapsedTime; // compute derivative
 
   double out = kp * error + ki * cumError + kd * rateError; // PID output
