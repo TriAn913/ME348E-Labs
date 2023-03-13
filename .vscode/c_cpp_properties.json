@@ -21,7 +21,8 @@
                 "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\lib\\gcc\\arm-none-eabi\\6.3.1\\include",
                 "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\lib\\gcc\\arm-none-eabi\\6.3.1\\include-fixed",
                 "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\tools\\arm-none-eabi-gcc\\6.3.1-20170620\\arm-none-eabi\\include",
-                "${env:USERPROFILE}\\Documents\\Energia\\libraries\\**"
+                "${env:USERPROFILE}\\Documents\\Energia\\libraries\\**",
+                "${workspaceFolder}"
             ],
             "forcedInclude": [
                 "${env:LOCALAPPDATA}\\Energia15\\packages\\energia\\hardware\\msp432r\\5.29.0\\cores\\msp432r\\ti\\runtime\\wiring\\Energia.h",

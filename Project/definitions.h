@@ -38,17 +38,32 @@
 /**
  * @brief	Pin number for the left IR sensor.
 */
-#define IR_L_PIN 38
+#define IR_L_PIN 17
 
 /**
  * @brief	Pin number for the center IR sensor.
 */
-#define IR_C_PIN 39
+#define IR_C_PIN 19
 
 /**
  * @brief	Pin number for the right IR sensor.
 */
-#define IR_R_PIN 40
+#define IR_R_PIN 23
+
+/**
+ * @brief   Flywheel PWM Speed Pin
+ */
+#define FLY_MOTOR_PWM_PIN 34
+
+/**
+ * @brief   Flywheel PWM Direction Pin 1
+ */
+#define FLY_MOTOR_PWM_PIN1 32
+
+/**
+ * @brief   Flywheel PWM Direction Pin 2
+ */
+#define FLY_MOTOR_PWM_PIN2 33
 
 /**
  * @brief	Pin number for the 1st Stepper Motor Pin.
@@ -106,12 +121,7 @@
 #define BOTH_MOTORS 2
 
 /**
- * @brief   Can be used to reference the right motor in the below functions.
- */
-#define FLY_MOTOR 3
-
-/**
- * @brief   Can be used to reference the right motor in the below functions.
+ * @brief   Can be used to reference the flywheel motor in the below functions.
  */
 #define FLY_MOTOR 3
 
@@ -327,6 +337,7 @@ void resumeMotor(uint8_t motorNum);
 /// - 0 for left motor
 /// - 1 for right motor
 /// - 2 for both motors
+/// - 3 for the flywheel motor
 
 /// \param[in] direction that specifies the motor's direction @n
 /// - 0 for forward
@@ -341,6 +352,7 @@ void setMotorDirection(uint8_t motorNum,uint8_t direction);
 /// - 0 for left motor
 /// - 1 for right motor
 /// - 2 for both motors
+/// - 3 for the flywheel motor
 ///
 /// \param[in] speed that specifies the motor speed. Valid values are 0 - 100.
 /// - 0 for 0% of motor speed.
@@ -357,6 +369,7 @@ void setMotorSpeed(uint8_t motorNum, uint8_t speed);
 /// - 0 for left motor
 /// - 1 for right motor
 /// - 2 for both motors
+/// - 3 for the flywheel motor
 ///
 /// \param[in] speed that specifies the motor speed. Valid values are -100 to 100.
 /// - -100 for 100% of motor speed, backwards.
@@ -403,7 +416,8 @@ uint16_t inches2WheelDeg(uint8_t distance);
 ///
 /// \param[in] kd derivative constant. Scales how much the change towards or away from the setpoint changes the output
 ///
-void computePID(int32_t setpoint, int32_t &prevError, int32_t input, int16_t &output, float dt, float &integral, float kp, float ki, float kd);
+/// \param[in] maxOutput the maximum output possible. Used to prevent integral windup. Default: 100
+void computePID(int32_t setpoint, int32_t &prevError, int32_t input, int16_t &output, float dt, float &integral, float kp, float ki, float kd, uint32_t maxOutput = 100);
 
 /// \brief Logging using Serial print and println with adaptable log levels.
 ///

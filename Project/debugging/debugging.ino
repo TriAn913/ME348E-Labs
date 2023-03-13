@@ -4,7 +4,7 @@
 #include <QTRSensors.h>
 #include <Romi_Motor_Power.h>
 #include <RSLK_Pins.h>
-#include "definitions.h"
+#include "Project\definitions.h"
 
 logLevels logLevel = INFO;
 
@@ -28,9 +28,9 @@ int32_t lf_prevError;
 unsigned long lf_prevTime;
 float lf_integral;
 int16_t lf_output;
-static const float lf_kp = 1.0f / 3.5f / 100.0f;    // error of 3500 (max) returns 10
-static const float lf_ki = 0.00005f / 3.5f / 100.0f;// integral constant
-static const float lf_kd = 0.2f / 3.5f / 100.0f;    // derivative constant
+static const float lf_kp = 1.0f / 3500.0f * 10.0f;      // error of 3500 (max) returns 10
+static const float lf_ki = 0.00005f / 3500.0f * 10.0f;  // integral constant
+static const float lf_kd = 0.2f / 3500.0f * 10.0f;      // derivative constant
 
 // launchpad left button (toggle on/off)
 bool onToggle = 0;          // toggle all functions on/off (off disables all motors)
@@ -164,6 +164,8 @@ void setDefaultsEncoderCnts()
 void setup()
 {
     customSetupRSLK(); // distance sensors and line sensors on the default rslk kit
+
+    setDefaults();
 }
 
 void loop()
@@ -173,6 +175,29 @@ void loop()
 
     if (onToggle)
     {
+        switch(0)
+        {
+            case 0: //test flywheel motor speeds
+            {
+                setMotorSpeed(FLY_MOTOR,80);
+                break;
+            }
+            case 1: //test line follower
+            {
+                readLineSensorsAndLinePos();
+                checkIntersection();
+                if(linePos !=9999 && !onInter)
+                {
+                    followLine();
+                }
+                break;
+            }
+            case 2: //test stepper
+            {
+                rotateStepperMotor(1/STEPPER_STEPS_PER_REV);
+                break;
+            }
+        }
     }
     else
     {
@@ -217,7 +242,7 @@ void followLine()
     {
         unsigned long currentTime = millis();
 
-        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, currentTime - lf_prevTime, lf_integral, lf_kp, lf_ki, lf_kd);
+        computePID(LF_MIDDLE, lf_prevError, linePos, lf_output, currentTime - lf_prevTime, lf_integral, lf_kp, lf_ki, lf_kd, 100);
 
         lf_prevTime = currentTime;
 

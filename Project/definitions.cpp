@@ -15,6 +15,10 @@ void customSetupRSLK()
 	motor[0].begin(MOTOR_L_SLP_PIN, MOTOR_L_DIR_PIN, MOTOR_L_PWM_PIN);
 	motor[1].begin(MOTOR_R_SLP_PIN, MOTOR_R_DIR_PIN, MOTOR_R_PWM_PIN);
 
+	pinMode(FLY_MOTOR_PWM_PIN1, OUTPUT);
+	pinMode(FLY_MOTOR_PWM_PIN2, OUTPUT);
+	pinMode(FLY_MOTOR_PWM_PIN, OUTPUT);
+
 	pinMode(IR_L_PIN, INPUT_PULLUP);
 	pinMode(IR_C_PIN, INPUT_PULLUP);
 	pinMode(IR_R_PIN, INPUT_PULLUP);
@@ -40,9 +44,9 @@ uint16_t readSharpDist(uint8_t num)
 
 void readIRSensor(bool* sensorValues)
 {
-	sensorValues[0] = digitalRead(IR_L_PIN);
-	sensorValues[1] = digitalRead(IR_C_PIN);
-	sensorValues[2] = digitalRead(IR_R_PIN);
+	sensorValues[0] = 1 - digitalRead(IR_L_PIN);
+	sensorValues[1] = 1 - digitalRead(IR_C_PIN);
+	sensorValues[2] = 1 - digitalRead(IR_R_PIN);
 }
 
 void readLineSensor(uint16_t* sensorValues)
@@ -221,6 +225,20 @@ void setMotorDirection(uint8_t motorNum, uint8_t direction) {
 			motor[1].directionBackward();
 		}
 	}
+
+	if (motorNum == 3)
+	{
+		if (direction == 0)
+		{
+			digitalWrite(FLY_MOTOR_PWM_PIN1, HIGH);
+			digitalWrite(FLY_MOTOR_PWM_PIN2, LOW);
+		}
+		else
+		{
+			digitalWrite(FLY_MOTOR_PWM_PIN1, LOW);
+			digitalWrite(FLY_MOTOR_PWM_PIN2, HIGH);
+		}
+	}
 }
 
 void setMotorSpeed(uint8_t motorNum, uint8_t speed) {
@@ -233,6 +251,11 @@ void setMotorSpeed(uint8_t motorNum, uint8_t speed) {
 	{
 		motor[1].setSpeed(speed);
 	}
+
+	if (motorNum == 3)
+	{
+		analogWrite(FLY_MOTOR_PWM_PIN, map(speed, 0, 100, 0, 255));
+	}
 }
 
 void setRawMotorSpeed(uint8_t motorNum, uint8_t speed) {
@@ -244,6 +267,11 @@ void setRawMotorSpeed(uint8_t motorNum, uint8_t speed) {
 	if (motorNum == 1 || motorNum == 2)
 	{
 		motor[1].setRawSpeed(speed);
+	}
+
+	if (motorNum == 3)
+	{
+		analogWrite(FLY_MOTOR_PWM_PIN, speed);
 	}
 }
 
@@ -273,12 +301,30 @@ void setMotorSpeed2(uint8_t motorNum, int8_t speed) {
 		}
 		motor[1].setSpeed(speed);
 	}
+
+	if (motorNum == 3)
+	{
+		if (speed >= 0)
+		{
+			digitalWrite(FLY_MOTOR_PWM_PIN1, HIGH);
+			digitalWrite(FLY_MOTOR_PWM_PIN2, LOW);
+		}
+		else
+		{
+			digitalWrite(FLY_MOTOR_PWM_PIN1, LOW);
+			digitalWrite(FLY_MOTOR_PWM_PIN2, HIGH);
+		}
+		analogWrite(FLY_MOTOR_PWM_PIN, abs(speed));
+	}
 }
 
-void computePID(int32_t setpoint, int32_t& prevError, int32_t input, int16_t& output, float dt, float& integral, float kp, float ki, float kd)
+void computePID(int32_t setpoint, int32_t& prevError, int32_t input, int16_t& output, float dt, float& integral, float kp, float ki, float kd, uint16_t maxOutput = 100)
 {
 	int32_t error = setpoint - input;
-	integral += (float)error * dt;
+	if (abs(output) >= maxOutput)
+	{
+		integral += (float)error * dt;
+	}
 	float deriv = (float)(error - prevError) / dt;
 	output = kp * (float)error + ki * integral + kd * deriv;
 	prevError = error;
